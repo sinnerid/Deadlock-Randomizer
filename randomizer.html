@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>Deadlock — рандомайзер с исключениями сборок (вертикальная прокрутка)</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --card: #11172a;
+    --accent: #7cc7ff;
+    --text: #e8f0ff;
+    --muted: #9ab0d1;
+    --border: #1d2743;
+  }
+  body { background: var(--bg); color: var(--text); margin: 24px; font-family: Inter, system-ui, sans-serif; }
+  h1 { margin: 0 0 16px; letter-spacing: .3px; }
+  .controls {
+    display: grid; grid-template-columns: repeat(5, max-content); gap: 12px 18px; align-items: end;
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  }
+  label { display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
+  input[type="number"] {
+    width: 84px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
+    background: #0f162b; color: var(--text); outline: none;
+  }
+  button {
+    padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: linear-gradient(180deg,#1b2a48,#15223d);
+    color: var(--text); cursor: pointer; transition: transform .05s ease, box-shadow .2s ease;
+    box-shadow: 0 6px 18px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  button:hover { box-shadow: 0 10px 28px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06); }
+  button:active { transform: translateY(1px); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 14px; margin-top: 16px; }
+  .item {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 10px; display: flex; flex-direction: column; align-items: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,.28);
+    transition: transform .12s ease, box-shadow .2s ease;
+  }
+  .item:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(0,0,0,.35); }
+
+  /* Вертикальный слот */
+  .slot { width: 110px; height: 110px; overflow: hidden; border-radius: 10px; border: 1px solid var(--border); }
+  .slot-inner { display:flex; flex-direction: column; will-change: transform; }
+  .slot-inner img { width: 100%; height: 110px; object-fit: cover; display: block; }
+
+  .caption{
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.2;              /* базовая высота строки */
+  height: calc(1.2em * 2);       /* РОВНО 2 строки фикс */
+  text-align: center;
+  color: var(--muted);
+  overflow: hidden;               /* лишнее не влияет на высоту */
+  display: -webkit-box;           /* многоточие на 2 строки (WebKit/Chromium) */
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+  .warn { color:#ff8282; font-size:12px; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <h1>Deadlock build randomizer</h1>
+
+  <div class="controls">
+    <label>Total items: <input id="total" type="number" min="1" value="10"></label>
+    <label>Tier 1: <input id="tier1" type="number" min="0" value="0"></label>
+    <label>Tier 2: <input id="tier2" type="number" min="0" value="0"></label>
+    <label>Tier 3: <input id="tier3" type="number" min="0" value="0"></label>
+    <label>Tier 4: <input id="tier4" type="number" min="0" value="0"></label>
+    <button id="rollBtn">Create build</button>
+  </div>
+
+  <div id="result" class="grid"></div>
+  <div id="warn" class="warn"></div>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  // ===== 0) ВСТАВИМ КНОПКУ "Остановить" ЕСЛИ ЕЁ НЕТ =====
+  const controls = document.querySelector('.controls');
+  let stopBtn = document.getElementById('stopBtn');
+  if (!stopBtn) {
+    stopBtn = document.createElement('button');
+    stopBtn.id = 'stopBtn';
+    stopBtn.textContent = 'STOP';
+    stopBtn.disabled = true; // по умолчанию недоступна
+    controls.appendChild(stopBtn);
+  }
+    // Кнопка "Рандом тиров"
+  let randBtn = document.getElementById('randBtn');
+  if (!randBtn) {
+    randBtn = document.createElement('button');
+    randBtn.id = 'randBtn';
+    randBtn.textContent = 'Random tier';
+    controls.appendChild(randBtn);
+  }
+
+
+  // ===== 1) ПУЛЫ ПО ТИРАМ =====
+  const TIERS = {
+    1: [
+      "Close Quarters","Extended Magazine","Headshot Booster","High Velocity Rounds","Monster Rounds","Rapid Rounds","Restorative Shot",
+      "Extra Health","Extra Regen","Extra Stamina","Healing Rite","Melee Lifesteal","Rebuttal","Sprint Boots",
+      "Extra Charge","Extra Spirit","Mystic Burst","Mystic Expansion","Mystic Regeneration","Rusted Barrel","Spirit Strike"
+    ],
+    2: [
+      "Active Reload","Backstabber","Fleetfoot","Intensifying Magazine","Kinetic Dash","Long Range","Melee Charge","Mystic Shot",
+      "Opening Rounds","Slowing Bullets","Spirit Shredder Bullets","Split Shot","Swift Striker","Titanic Magazine","Weakening Headshot",
+      "Battle Vest","Bullet Lifesteal","Debuff Reducer","Enchanter's Emblem","Enduring Speed","Guardian Ward","Healbane","Healing Booster",
+      "Reactive Barrier","Restorative Locket","Return Fire","Spirit Lifesteal","Spirit Shielding","Weapon Shielding",
+      "Arcane Surge","Bullet Resist Shredder","Cold Front","Compress Cooldown","Duration Extender","Improved Spirit","Mystic Slow",
+      "Mystic Vulnerability","Quicksilver Reload","Slowing Hex","Spirit Sap","Suppressor"
+    ],
+    3: [
+      "Alchemical Fire","Berserker","Blood Tribute","Burst Fire","Cultist Sacrifice","Escalating Resilience","Express Shot","Headhunter",
+      "Heroic Aura","Hollow Point","Hunter's Aura","Point Blank","Sharpshooter","Spirit Rend","Tesla Bullets","Toxic Bullets","Weighted Shots",
+      "Bullet Resilience","Counterspell","Debuff Remover","Fortitude","Fury Trance","Healing Nova","Lifestrike","Majestic Leap","Metal Skin",
+      "Rescue Beam","Spirit Resilience","Stamina Mastery","Trophy Collector","Veil Walker","Warp Stone",
+      "Decay","Disarming Hex","Greater Expansion","Knockdown","Radiant Regeneration","Rapid Recharge","Silence Wave","Spirit Snatch",
+      "Superior Cooldown","Superior Duration","Surge of Power","Tankbuster","Torment Pulse"
+    ],
+    4: [
+      "Armor Piercing Rounds","Capacitor","Crippling Headshot","Crushing Fists","Frenzy","Glass Cannon","Lucky Shot","Ricoshet","Shadow Weave",
+      "Silencer","Spellslinger","Spiritual Overflow",
+      "Cheat Death","Colossus","Divine Barrier","Diviner's Kevlar","Healing Tempo","Infuser","Inhibitor","Juggernaut","Leech","Phantom Strike",
+      "Plated Armor","Siphon Bullets","Spellbreaker","Unstoppable","Vampiric Burst","Witchmail",
+      "Arctic Blast","Boundless Spirit","Curse","Echo Shard","Escalating Exposure","Ethereal Shift","Focus Lens","Lightning Scroll",
+      "Magic Carpet","Mercurial Magnum","Mystic Reverb","Refresher","Scourge","Spirit Burn","Transcendent Cooldown","Vortex Web"
+    ]
+  };
+  const ALL_ITEMS = [...TIERS[1], ...TIERS[2], ...TIERS[3], ...TIERS[4]];
+
+  // ===== 2) РЕЦЕПТЫ И КОНФЛИКТЫ =====
+  const RECIPES = {
+    "Point Blank": ["Close Quarters"],
+    "Titanic Magazine": ["Extended Magazine"],
+    "Escalating Resilience": ["Extended Magazine"],
+    "Headhunter": ["Headshot Booster"],
+    "Armor Piercing Rounds": ["High Velocity Rounds"],
+    "Express Shot": ["High Velocity Rounds"],
+    "Cultist Sacrifice": ["Monster Rounds"],
+    "Burst Fire": ["Rapid Rounds"],
+    "Swift Striker": ["Rapid Rounds"],
+    "Sharpshooter": ["Long Range"],
+    "Crushing Fists": ["Melee Charge"],
+    "Spirit Rend": ["Spirit Shredder Bullets"],
+    "Crippling Headshot": ["Weakening Headshot"],
+    "Capacitor": ["Tesla Bullets"],
+    "Fortitude": ["Extra Health"],
+    "Colossus": ["Extra Health"],
+    "Healing Booster": ["Extra Regen"],
+    "Healing Tempo": ["Healing Booster"],
+    "Kinetic Dash": ["Extra Stamina"],
+    "Stamina Mastery": ["Extra Stamina"],
+    "Arcane Surge": ["Extra Stamina"],
+    "Rescue Beam": ["Healing Rite"],
+    "Healing Nova": ["Healing Rite"],
+    "Lifestrike": ["Melee Lifesteal"],
+    "Enduring Speed": ["Sprint Boots"],
+    "Trophy Collector": ["Sprint Boots"],
+    "Juggernaut": ["Enduring Speed"],
+    "Leech": ["Bullet Lifesteal"],
+    "Fury Trance": ["Bullet Lifesteal"],
+    "Debuff Remover": ["Debuff Reducer"],
+    "Unstoppable": ["Debuff Reducer"],
+    "Divine Barrier": ["Guardian Ward"],
+    "Leech": ["Spirit Lifesteal"],
+    "Infuser": ["Spirit Lifesteal"],
+    "Rapid Recharge": ["Extra Charge"],
+    "Improved Spirit": ["Extra Spirit"],
+    "Surge of Power": ["Extra Spirit"],
+    "Boundless Spirit": ["Improved Spirit"],
+    "Greater Expansion": ["Mystic Expansion"],
+    "Radiant Regeneration": ["Mystic Regeneration"],
+    "Disarming Hex": ["Rusted Barrel"],
+    "Spirit Snatch": ["Spirit Strike"],
+    "Arctic Blast": ["Cold Front"],
+    "Superior Cooldown": ["Compress Cooldown"],
+    "Transcendent Cooldown": ["Superior Cooldown"],
+    "Superior Duration": ["Duration Extender"],
+    "Escalating Exposure": ["Mystic Vulnerability"],
+    "Mercurial Magnum": ["Quicksilver Reload"],
+    "Vortex Web": ["Slowing Hex"],
+    "Silence Wave": ["Spirit Sap"],
+    "Tankbuster": ["Mystic Burst"],
+    "Lightning Scroll": ["Mystic Slow"]
+  };
+  // ===== АКТИВНЫЕ ПРЕДМЕТЫ И ЛИМИТ =====
+  const ACTIVE_CAP = 4; // максимум активных
+  const ACTIVE_ITEMS = new Set([
+    "Fleetfoot","Split Shot","Alchemical Fire","Blood Tribute","Cultist Sacrifice","Heroic Aura",
+    "Capacitor","Shadow Weave","Healing Rite","Guardian Ward","Restorative Locket","Return Fire",
+    "Debuff Remover","Fury Trance","Healing Nova","Majestic Leap","Metal Skin","Rescue Beam",
+    "Warp Stone","Colossus","Divine Barrier","Infuser","Phantom Strike","Unstoppable","Vampiric Burst",
+    "Rusted Barrel","Cold Front","Slowing Hex","Spirit Sap","Decay","Disarming Hex","Knockdown",
+    "Silence Wave","Arctic Blast","Curse","Echo Shard","Ethereal Shift","Focus Lens","Magic Carpet",
+    "Refresher","Scourge","Vortex Web"
+  ]);
+
+
+  const conflictGroups = (() => {
+    const adj = new Map();
+    const addEdge = (a,b) => {
+      if(!adj.has(a)) adj.set(a,new Set());
+      if(!adj.has(b)) adj.set(b,new Set());
+      adj.get(a).add(b); adj.get(b).add(a);
+    };
+    for (const [result, parts] of Object.entries(RECIPES)) {
+      for (const p of parts) addEdge(result, p);
+    }
+    for (const it of ALL_ITEMS) if(!adj.has(it)) adj.set(it, new Set());
+
+    const visited = new Set();
+    const groups = [];
+    for (const node of adj.keys()) {
+      if (visited.has(node)) continue;
+      const stack = [node];
+      const comp = new Set();
+      visited.add(node);
+      while (stack.length) {
+        const v = stack.pop();
+        comp.add(v);
+        for (const w of adj.get(v)) {
+          if (!visited.has(w)) { visited.add(w); stack.push(w); }
+        }
+      }
+      groups.push(comp);
+    }
+    const compIndex = new Map();
+    groups.forEach((set, idx)=>{ for(const name of set) compIndex.set(name, idx); });
+    return { groups, compIndex };
+  })();
+  const sameGroup = (a, b) => {
+    const ai = conflictGroups.compIndex.get(a);
+    const bi = conflictGroups.compIndex.get(b);
+    return ai !== undefined && ai === bi && a !== b;
+  };
+
+  // ===== 3) ХЕЛПЕРЫ =====
+  const resultEl = document.getElementById('result');
+  const warnEl   = document.getElementById('warn');
+  const rollBtn  = document.getElementById('rollBtn');
+
+  const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const isAllowed = (candidate, picked) => !picked.some(p => sameGroup(candidate,p));
+  const nameToFile = name => "images/" + name.toLowerCase().replace(/['’]/g,"").replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"") + "_sm.webp";
+  const makeImg = name => { const img=document.createElement('img'); img.src=nameToFile(name); img.dataset.name=name; return img; };
+
+  // читаем текущий translateY
+  function getTranslateY(el){
+    const t = getComputedStyle(el).transform;
+    if (!t || t === 'none') return 0;
+    const m = t.match(/matrix.*\((.+)\)/);
+    if (!m) return 0;
+    const parts = m[1].split(',').map(s => parseFloat(s.trim()));
+    return parts.length >= 6 ? parts[5] : 0;
+  }
+    // Разбивка total на 4 неотрицательных целых, сумма ровно total (stars & bars)
+  function splitTotalInto4(total) {
+    const cuts = [0,
+      Math.floor(Math.random() * (total + 1)),
+      Math.floor(Math.random() * (total + 1)),
+      Math.floor(Math.random() * (total + 1)),
+      total
+    ].sort((a,b)=>a-b);
+    return [
+      cuts[1]-cuts[0],
+      cuts[2]-cuts[1],
+      cuts[3]-cuts[2],
+      cuts[4]-cuts[3],
+    ];
+  }
+
+
+  // Фаза A: бесконечный линейный спин (вниз)
+  function startLinearSpin(slotEl, pool, speedPx = 240) {
+    const inner = slotEl.querySelector('.slot-inner');
+    const frame = slotEl.clientHeight;
+
+    if (!inner.children.length) {
+      inner.appendChild(makeImg(pool[Math.floor(Math.random() * pool.length)])); // буфер
+      for (let i = 0; i < 6; i++) inner.appendChild(makeImg(pool[Math.floor(Math.random()*pool.length)]));
+    }
+
+    slotEl._offset = slotEl._offset || 0;
+    slotEl._lastTs = 0;
+
+    function step(ts) {
+      if (!slotEl._lastTs) slotEl._lastTs = ts;
+      const dt = (ts - slotEl._lastTs) / 1000;
+      slotEl._lastTs = ts;
+
+      slotEl._offset += speedPx * dt; // вниз
+
+      while (slotEl._offset >= frame) {
+        slotEl._offset -= frame;
+        inner.insertBefore(makeImg(pool[Math.floor(Math.random()*pool.length)]), inner.firstChild);
+        if (inner.children.length > 16) inner.removeChild(inner.lastChild);
+      }
+
+      const y = -frame + slotEl._offset;
+      inner.style.transition = 'none';
+      inner.style.transform  = `translateY(${y}px)`;
+
+      // подпись кадра в окне
+      const progress = (y + frame) / frame; // 0..1
+      const idx = progress < 0.5 ? 1 : 0;
+      const vis = inner.children[idx];
+      if (vis && slotEl._caption) slotEl._caption.textContent = vis.dataset.name || '';
+
+      slotEl._raf = requestAnimationFrame(step);
+    }
+
+    cancelAnimationFrame(slotEl._raf);
+    slotEl._raf = requestAnimationFrame(step);
+  }
+
+  // Фаза B: останов с плавной декелерацией на финале
+  function stopWithDecel(slotEl, finalName, pool, speedPx = 240, extraSpins = 6) {
+    const inner = slotEl.querySelector('.slot-inner');
+    cancelAnimationFrame(slotEl._raf);
+
+    const frame = slotEl.clientHeight;
+    const k = extraSpins + 1; // рандомы + финал
+
+    // фиксируем старт
+    const y0 = getTranslateY(inner);
+    inner.style.transition = 'none';
+    inner.style.transform  = `translateY(${y0}px)`;
+    inner.offsetHeight;
+
+    // подложим сверху рандомы + финал
+    for (let i = 0; i < extraSpins; i++) inner.insertBefore(makeImg(pool[Math.floor(Math.random()*pool.length)]), inner.firstChild);
+    inner.insertBefore(makeImg(finalName), inner.firstChild);
+
+    // компенсируем добавленную высоту
+    const yStart = y0 - k * frame;
+    inner.style.transform = `translateY(${yStart}px)`;
+    inner.offsetHeight;
+
+    // едем к 0, длительность из дистанции/скорости
+    const distance = 0 - yStart;
+    const duration = Math.max(180, Math.round((Math.abs(distance) / speedPx) * 1000));
+
+    let stopRaf;
+    function tickCaption() {
+      const yy = getTranslateY(inner);
+      const idx = Math.min(inner.children.length - 1, Math.max(0, Math.round(-yy / frame)));
+      const vis = inner.children[idx];
+      if (vis && slotEl._caption) slotEl._caption.textContent = vis.dataset.name || '';
+      stopRaf = requestAnimationFrame(tickCaption);
+    }
+
+    requestAnimationFrame(() => {
+      inner.style.transition = `transform ${duration}ms cubic-bezier(.2,.9,.1,1)`;
+      inner.style.transform  = 'translateY(0)';
+      stopRaf = requestAnimationFrame(tickCaption);
+    });
+
+    return new Promise(resolve => {
+      inner.addEventListener('transitionend', () => {
+        cancelAnimationFrame(stopRaf);
+        if (slotEl._caption) slotEl._caption.textContent = finalName;
+        inner.style.transition = 'none';
+        inner.style.transform  = 'translateY(0)';
+        while (inner.children.length > 14) inner.removeChild(inner.lastChild);
+        resolve();
+      }, { once: true });
+    });
+  }
+
+  // ===== 4) СОБИРАТЕЛЬ ПРЕДМЕТОВ (с учётом лимита активных) =====
+  function buildPicks(totalWanted, counts) {
+    const picks = [];
+    let activeCount = 0;
+
+    // вспомогательные
+    const canAdd = (name) => {
+      if (!isAllowed(name, picks)) return false;
+      if (ACTIVE_ITEMS.has(name) && activeCount >= ACTIVE_CAP) return false;
+      return true;
+    };
+    const add = (name) => {
+      picks.push(name);
+      if (ACTIVE_ITEMS.has(name)) activeCount++;
+    };
+
+    // 1) Гарантированные по тиру
+    for (let t = 1; t <= 4; t++) {
+      const need = counts[t] || 0;
+      if (need <= 0) continue;
+
+      const pool = shuffle([...TIERS[t]]);
+      for (const cand of pool) {
+        // уже набрали в этом тира?
+        const haveInTier = picks.filter(x => TIERS[t].includes(x)).length;
+        if (haveInTier >= need) break;
+
+        if (canAdd(cand)) add(cand);
+      }
+
+      // Если не добрали нужное из-за лимита/конфликтов — попытаться добрать именно неактивными из этого же тира
+      let haveInTier = picks.filter(x => TIERS[t].includes(x)).length;
+      if (haveInTier < need) {
+        const nonActive = shuffle(TIERS[t].filter(n => !ACTIVE_ITEMS.has(n)));
+        for (const cand of nonActive) {
+          haveInTier = picks.filter(x => TIERS[t].includes(x)).length;
+          if (haveInTier >= need) break;
+          if (canAdd(cand)) add(cand);
+        }
+      }
+    }
+
+    // 2) Добор до totalWanted — из тиров, где counts[t] === 0
+    if (picks.length < totalWanted) {
+      const zeroPool = [];
+      for (let t = 1; t <= 4; t++) if ((counts[t] || 0) === 0) zeroPool.push(...TIERS[t]);
+      shuffle(zeroPool);
+
+      for (const cand of zeroPool) {
+        if (picks.length >= totalWanted) break;
+        if (canAdd(cand)) add(cand);
+      }
+    }
+
+    // 3) На всякий случай — общий добор неактивными, если всё ещё меньше totalWanted
+    if (picks.length < totalWanted) {
+      const nonActiveAll = shuffle(ALL_ITEMS.filter(n => !ACTIVE_ITEMS.has(n)));
+      for (const cand of nonActiveAll) {
+        if (picks.length >= totalWanted) break;
+        if (canAdd(cand)) add(cand);
+      }
+    }
+
+    return picks;
+  }
+
+
+  // ===== 5) СОСТОЯНИЕ СПИНА =====
+  let currentSlots = [];
+  let currentPicks = [];
+  let spinning = false;
+  let stopping = false;
+
+  // Тюнинг скоростей
+  const speedPx    = 240;          // базовая скорость (px/с) для расчёта длительности остановки
+  const spinSpeed  = speedPx * 10; // линейная скорость во время бесконечной прокрутки
+  const extraSpins = 6;            // «хвост» перед финалом
+
+  // ===== 6) ОБРАБОТЧИКИ КНОПОК =====
+  rollBtn.addEventListener('click', async () => {
+    if (spinning || stopping) return; // игнор, пока идёт процесс
+
+    resultEl.innerHTML = '';
+    warnEl.textContent = '';
+
+    const totalWanted = parseInt(document.getElementById('total').value) || 10;
+    const counts = {
+      1: parseInt(document.getElementById('tier1').value) || 0,
+      2: parseInt(document.getElementById('tier2').value) || 0,
+      3: parseInt(document.getElementById('tier3').value) || 0,
+      4: parseInt(document.getElementById('tier4').value) || 0,
+    };
+
+    currentPicks = buildPicks(totalWanted, counts);
+    if (currentPicks.length < totalWanted) {
+      warnEl.textContent = `Предупреждение: из-за конфликтов сборок удалось выбрать только ${currentPicks.length} из ${totalWanted}.`;
+    }
+
+    // Рендер слотов и пуск бесконечного спина
+    currentSlots = [];
+    currentPicks.forEach(name => {
+      const card = document.createElement('div');
+      card.className = 'item';
+
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+
+      const inner = document.createElement('div');
+      inner.className = 'slot-inner';
+      slot.appendChild(inner);
+
+      const cap = document.createElement('div');
+      cap.className = 'caption';
+      cap.textContent = name; // сразу показываем текст, затем будет синхронизироваться
+
+      slot._caption = cap;
+
+      card.appendChild(slot);
+      card.appendChild(cap);
+      resultEl.appendChild(card);
+
+      currentSlots.push(slot);
+    });
+
+    currentSlots.forEach(slot => startLinearSpin(slot, ALL_ITEMS, spinSpeed));
+
+    spinning = true;
+    stopBtn.disabled = false;
+
+    // дадим браузеру кадр, чтобы зафиксировать старт
+    await new Promise(requestAnimationFrame);
+  });
+
+  stopBtn.addEventListener('click', async () => {
+    if (!spinning || stopping) return;
+    stopping = true;
+    stopBtn.disabled = true;
+
+    // запустим фазу B для всех слотов параллельно
+    const promises = currentSlots.map((slot, i) => {
+      // рандомная задержка 0–300 мс (чтобы не все в одну миллисекунду дёрнулись)
+      const delay = Math.random() * 300;
+      return new Promise(resolve => {
+        setTimeout(() => {
+          stopWithDecel(slot, currentPicks[i], ALL_ITEMS, speedPx * 1.5, 25).then(resolve);
+        }, delay);
+      });
+    });
+
+    // ждём когда ВСЕ завершат остановку
+    await Promise.all(promises);
+
+    spinning = false;
+    stopping = false;
+  });
+    // Клик по "Рандом тиров" — просто заполняем поля #tier1..#tier4
+  randBtn.addEventListener('click', () => {
+    const totalWanted = parseInt(document.getElementById('total').value) || 0;
+    const [c1,c2,c3,c4] = splitTotalInto4(totalWanted);
+
+    document.getElementById('tier1').value = c1;
+    document.getElementById('tier2').value = c2;
+    document.getElementById('tier3').value = c3;
+    document.getElementById('tier4').value = c4;
+  });
+});
+
+</script>
+</body>
+</html>
