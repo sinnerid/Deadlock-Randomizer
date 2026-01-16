@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8" />
-<title>Deadlock — рандомайзер с исключениями сборок (вертикальная прокрутка)</title>
+<title>Deadlock — рандомайзер + Hero ролл (вертикальная прокрутка)</title>
 <style>
   :root {
     --bg: #0b1020;
@@ -14,15 +14,21 @@
   }
   body { background: var(--bg); color: var(--text); margin: 24px; font-family: Inter, system-ui, sans-serif; }
   h1 { margin: 0 0 16px; letter-spacing: .3px; }
+  h2 { margin: 18px 0 10px; letter-spacing: .2px; font-size: 16px; color: var(--text); }
+
   .controls {
     display: grid; grid-template-columns: repeat(5, max-content); gap: 12px 18px; align-items: end;
     background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
   }
+  .controls.hero-controls { grid-template-columns: repeat(2, max-content); }
+
   label { display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
-  input[type="number"] {
-    width: 84px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
+  input[type="number"], input[type="text"] {
+    width: 112px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
     background: #0f162b; color: var(--text); outline: none;
   }
+  input#total, input#tier1, input#tier2, input#tier3, input#tier4 { width: 84px; }
+
   button {
     padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: linear-gradient(180deg,#1b2a48,#15223d);
     color: var(--text); cursor: pointer; transition: transform .05s ease, box-shadow .2s ease;
@@ -30,7 +36,12 @@
   }
   button:hover { box-shadow: 0 10px 28px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06); }
   button:active { transform: translateY(1px); }
+
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 14px; margin-top: 16px; }
+
+  /* Увеличенный отступ между слотами героев + отступ слева */
+  #heroResult { gap: 75px; margin-top: 48px; margin-left: 48px; }
+
   .item {
     background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 10px; display: flex; flex-direction: column; align-items: center;
     box-shadow: 0 8px 24px rgba(0,0,0,.28);
@@ -38,23 +49,28 @@
   }
   .item:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(0,0,0,.35); }
 
-  /* Вертикальный слот */
+  /* Вертикальный слот предметов */
   .slot { width: 110px; height: 110px; overflow: hidden; border-radius: 10px; border: 1px solid var(--border); }
   .slot-inner { display:flex; flex-direction: column; will-change: transform; }
   .slot-inner img { width: 100%; height: 110px; object-fit: cover; display: block; }
 
+  /* Вертикальный слот героя (карта) */
+  .hero-slot { width: 180px; height: 260px; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); background: #0f162b; }
+  .hero-slot-inner { display:flex; flex-direction: column; will-change: transform; }
+  .hero-slot-inner img { width: 100%; height: 260px; object-fit: contain; display: block; }
+
   .caption{
-  margin-top: 8px;
-  font-size: 12px;
-  line-height: 1.2;              /* базовая высота строки */
-  height: calc(1.2em * 2);       /* РОВНО 2 строки фикс */
-  text-align: center;
-  color: var(--muted);
-  overflow: hidden;               /* лишнее не влияет на высоту */
-  display: -webkit-box;           /* многоточие на 2 строки (WebKit/Chromium) */
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.2;
+    height: calc(1.2em * 2);
+    text-align: center;
+    color: var(--muted);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
 
   .warn { color:#ff8282; font-size:12px; margin-top: 8px; }
 </style>
@@ -62,40 +78,54 @@
 <body>
   <h1>Deadlock build randomizer</h1>
 
-  <div class="controls">
-    <label>Total items: <input id="total" type="number" min="1" value="10"></label>
+  <div class="controls" id="buildControls">
+    <label>Total items: <input id="total" type="number" min="1" value="12"></label>
     <label>Tier 1: <input id="tier1" type="number" min="0" value="0"></label>
     <label>Tier 2: <input id="tier2" type="number" min="0" value="0"></label>
     <label>Tier 3: <input id="tier3" type="number" min="0" value="0"></label>
     <label>Tier 4: <input id="tier4" type="number" min="0" value="0"></label>
+    <label>Joker (min-max): <input id="joker" type="text" value="" placeholder="например 1-3"></label>
     <button id="rollBtn">Create build</button>
   </div>
 
   <div id="result" class="grid"></div>
   <div id="warn" class="warn"></div>
+
+  <h2>Hero roll (3 cards)</h2>
+  <div class="controls hero-controls" id="heroControls">
+    <button id="rollHeroBtn">Roll Hero</button>
+    <button id="stopHeroBtn" disabled>Stop</button>
+  </div>
+
+  <div id="heroResult" class="grid"></div>
+
 <script>
 window.addEventListener('DOMContentLoaded', () => {
-  // ===== 0) ВСТАВИМ КНОПКУ "Остановить" ЕСЛИ ЕЁ НЕТ =====
-  const controls = document.querySelector('.controls');
+  // =========================================================
+  // 0) КНОПКИ ДЛЯ БИЛДА (STOP + Random tier)
+  // =========================================================
+  const buildControls = document.getElementById('buildControls');
+
   let stopBtn = document.getElementById('stopBtn');
   if (!stopBtn) {
     stopBtn = document.createElement('button');
     stopBtn.id = 'stopBtn';
     stopBtn.textContent = 'STOP';
-    stopBtn.disabled = true; // по умолчанию недоступна
-    controls.appendChild(stopBtn);
+    stopBtn.disabled = true;
+    buildControls.appendChild(stopBtn);
   }
-    // Кнопка "Рандом тиров"
+
   let randBtn = document.getElementById('randBtn');
   if (!randBtn) {
     randBtn = document.createElement('button');
     randBtn.id = 'randBtn';
     randBtn.textContent = 'Random tier';
-    controls.appendChild(randBtn);
+    buildControls.appendChild(randBtn);
   }
 
-
-  // ===== 1) ПУЛЫ ПО ТИРАМ =====
+  // =========================================================
+  // 1) ПРЕДМЕТЫ (TIERS)
+  // =========================================================
   const TIERS = {
     1: [
       "Close Quarters","Extended Magazine","Headshot Booster","High Velocity Rounds","Monster Rounds","Rapid Rounds","Restorative Shot",
@@ -127,9 +157,17 @@ window.addEventListener('DOMContentLoaded', () => {
       "Magic Carpet","Mercurial Magnum","Mystic Reverb","Refresher","Scourge","Spirit Burn","Transcendent Cooldown","Vortex Web"
     ]
   };
+
   const ALL_ITEMS = [...TIERS[1], ...TIERS[2], ...TIERS[3], ...TIERS[4]];
 
-  // ===== 2) РЕЦЕПТЫ И КОНФЛИКТЫ =====
+  // Joker (как обычный предмет в общем пуле)
+  const JOKER_NAME = 'Joker';
+  const JOKER_IMG  = 'images/joker.png'; // ты потом подставишь свою картинку
+  const ITEM_POOL  = [...ALL_ITEMS, JOKER_NAME];
+
+  // =========================================================
+  // 2) РЕЦЕПТЫ И КОНФЛИКТЫ
+  // =========================================================
   const RECIPES = {
     "Point Blank": ["Close Quarters"],
     "Titanic Magazine": ["Extended Magazine"],
@@ -184,8 +222,9 @@ window.addEventListener('DOMContentLoaded', () => {
     "Tankbuster": ["Mystic Burst"],
     "Lightning Scroll": ["Mystic Slow"]
   };
+
   // ===== АКТИВНЫЕ ПРЕДМЕТЫ И ЛИМИТ =====
-  const ACTIVE_CAP = 4; // максимум активных
+  const ACTIVE_CAP = 4;
   const ACTIVE_ITEMS = new Set([
     "Fleetfoot","Split Shot","Alchemical Fire","Blood Tribute","Cultist Sacrifice","Heroic Aura",
     "Capacitor","Shadow Weave","Healing Rite","Guardian Ward","Restorative Locket","Return Fire",
@@ -195,7 +234,6 @@ window.addEventListener('DOMContentLoaded', () => {
     "Silence Wave","Arctic Blast","Curse","Echo Shard","Ethereal Shift","Focus Lens","Magic Carpet",
     "Refresher","Scourge","Vortex Web"
   ]);
-
 
   const conflictGroups = (() => {
     const adj = new Map();
@@ -229,23 +267,43 @@ window.addEventListener('DOMContentLoaded', () => {
     groups.forEach((set, idx)=>{ for(const name of set) compIndex.set(name, idx); });
     return { groups, compIndex };
   })();
+
   const sameGroup = (a, b) => {
     const ai = conflictGroups.compIndex.get(a);
     const bi = conflictGroups.compIndex.get(b);
     return ai !== undefined && ai === bi && a !== b;
   };
 
-  // ===== 3) ХЕЛПЕРЫ =====
+  // =========================================================
+  // 3) ХЕЛПЕРЫ
+  // =========================================================
   const resultEl = document.getElementById('result');
   const warnEl   = document.getElementById('warn');
   const rollBtn  = document.getElementById('rollBtn');
 
   const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
   const isAllowed = (candidate, picked) => !picked.some(p => sameGroup(candidate,p));
-  const nameToFile = name => "images/" + name.toLowerCase().replace(/['’]/g,"").replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"") + "_sm.webp";
-  const makeImg = name => { const img=document.createElement('img'); img.src=nameToFile(name); img.dataset.name=name; return img; };
 
-  // читаем текущий translateY
+  const nameToFile = (name) => {
+    if (name === JOKER_NAME) return JOKER_IMG;
+    return (
+      "images/" +
+      name.toLowerCase()
+        .replace(/['’]/g,"")
+        .replace(/\s+/g,"_")
+        .replace(/[^a-z0-9_]/g,"") +
+      "_sm.webp"
+    );
+  };
+
+  const makeImg = (nameOrObj) => {
+    const name = (nameOrObj && typeof nameOrObj === 'object') ? (nameOrObj.name || '') : String(nameOrObj);
+    const img = document.createElement('img');
+    img.src = nameToFile(name);
+    img.dataset.name = name;
+    return img;
+  };
+
   function getTranslateY(el){
     const t = getComputedStyle(el).transform;
     if (!t || t === 'none') return 0;
@@ -254,7 +312,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const parts = m[1].split(',').map(s => parseFloat(s.trim()));
     return parts.length >= 6 ? parts[5] : 0;
   }
-    // Разбивка total на 4 неотрицательных целых, сумма ровно total (stars & bars)
+
   function splitTotalInto4(total) {
     const cuts = [0,
       Math.floor(Math.random() * (total + 1)),
@@ -270,15 +328,30 @@ window.addEventListener('DOMContentLoaded', () => {
     ];
   }
 
+  function parseRangeToMinMax(raw) {
+    const s = String(raw || '').trim();
+    if (!s) return { min: 0, max: 0 };
 
-  // Фаза A: бесконечный линейный спин (вниз)
-  function startLinearSpin(slotEl, pool, speedPx = 240) {
-    const inner = slotEl.querySelector('.slot-inner');
+    // поддержка: "3", "1-3", "1..3", "1—3", "1–3"
+    const norm = s.replace(/[—–]/g,'-').replace(/\.\./g,'-');
+    const m = norm.match(/^\s*(\d+)\s*(?:-\s*(\d+)\s*)?$/);
+    if (!m) return { min: 0, max: 0 };
+
+    const a = Math.max(0, parseInt(m[1], 10) || 0);
+    const b = Math.max(0, parseInt((m[2] ?? m[1]), 10) || 0);
+    return { min: Math.min(a,b), max: Math.max(a,b) };
+  }
+
+  // =========================================================
+  // 4) СПИН-АНИМАЦИЯ (универсальная)
+  // =========================================================
+  function startLinearSpin(slotEl, pool, makeImgFn, speedPx = 240) {
+    const inner = slotEl.querySelector('.slot-inner, .hero-slot-inner');
     const frame = slotEl.clientHeight;
 
     if (!inner.children.length) {
-      inner.appendChild(makeImg(pool[Math.floor(Math.random() * pool.length)])); // буфер
-      for (let i = 0; i < 6; i++) inner.appendChild(makeImg(pool[Math.floor(Math.random()*pool.length)]));
+      inner.appendChild(makeImgFn(pool[Math.floor(Math.random() * pool.length)]));
+      for (let i = 0; i < 6; i++) inner.appendChild(makeImgFn(pool[Math.floor(Math.random()*pool.length)]));
     }
 
     slotEl._offset = slotEl._offset || 0;
@@ -289,11 +362,11 @@ window.addEventListener('DOMContentLoaded', () => {
       const dt = (ts - slotEl._lastTs) / 1000;
       slotEl._lastTs = ts;
 
-      slotEl._offset += speedPx * dt; // вниз
+      slotEl._offset += speedPx * dt;
 
       while (slotEl._offset >= frame) {
         slotEl._offset -= frame;
-        inner.insertBefore(makeImg(pool[Math.floor(Math.random()*pool.length)]), inner.firstChild);
+        inner.insertBefore(makeImgFn(pool[Math.floor(Math.random()*pool.length)]), inner.firstChild);
         if (inner.children.length > 16) inner.removeChild(inner.lastChild);
       }
 
@@ -301,8 +374,7 @@ window.addEventListener('DOMContentLoaded', () => {
       inner.style.transition = 'none';
       inner.style.transform  = `translateY(${y}px)`;
 
-      // подпись кадра в окне
-      const progress = (y + frame) / frame; // 0..1
+      const progress = (y + frame) / frame;
       const idx = progress < 0.5 ? 1 : 0;
       const vis = inner.children[idx];
       if (vis && slotEl._caption) slotEl._caption.textContent = vis.dataset.name || '';
@@ -314,30 +386,25 @@ window.addEventListener('DOMContentLoaded', () => {
     slotEl._raf = requestAnimationFrame(step);
   }
 
-  // Фаза B: останов с плавной декелерацией на финале
-  function stopWithDecel(slotEl, finalName, pool, speedPx = 240, extraSpins = 6) {
-    const inner = slotEl.querySelector('.slot-inner');
+  function stopWithDecel(slotEl, finalEntry, pool, makeImgFn, speedPx = 240, extraSpins = 6) {
+    const inner = slotEl.querySelector('.slot-inner, .hero-slot-inner');
     cancelAnimationFrame(slotEl._raf);
 
     const frame = slotEl.clientHeight;
-    const k = extraSpins + 1; // рандомы + финал
+    const k = extraSpins + 1;
 
-    // фиксируем старт
     const y0 = getTranslateY(inner);
     inner.style.transition = 'none';
     inner.style.transform  = `translateY(${y0}px)`;
     inner.offsetHeight;
 
-    // подложим сверху рандомы + финал
-    for (let i = 0; i < extraSpins; i++) inner.insertBefore(makeImg(pool[Math.floor(Math.random()*pool.length)]), inner.firstChild);
-    inner.insertBefore(makeImg(finalName), inner.firstChild);
+    for (let i = 0; i < extraSpins; i++) inner.insertBefore(makeImgFn(pool[Math.floor(Math.random()*pool.length)]), inner.firstChild);
+    inner.insertBefore(makeImgFn(finalEntry), inner.firstChild);
 
-    // компенсируем добавленную высоту
     const yStart = y0 - k * frame;
     inner.style.transform = `translateY(${yStart}px)`;
     inner.offsetHeight;
 
-    // едем к 0, длительность из дистанции/скорости
     const distance = 0 - yStart;
     const duration = Math.max(180, Math.round((Math.abs(distance) / speedPx) * 1000));
 
@@ -356,6 +423,11 @@ window.addEventListener('DOMContentLoaded', () => {
       stopRaf = requestAnimationFrame(tickCaption);
     });
 
+    const finalName =
+      (finalEntry && typeof finalEntry === 'object')
+        ? (finalEntry.name || '')
+        : String(finalEntry);
+
     return new Promise(resolve => {
       inner.addEventListener('transitionend', () => {
         cancelAnimationFrame(stopRaf);
@@ -368,12 +440,13 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ===== 4) СОБИРАТЕЛЬ ПРЕДМЕТОВ (с учётом лимита активных) =====
+  // =========================================================
+  // 5) СОБИРАТЕЛЬ ПРЕДМЕТОВ (с лимитом активных)
+  // =========================================================
   function buildPicks(totalWanted, counts) {
     const picks = [];
     let activeCount = 0;
 
-    // вспомогательные
     const canAdd = (name) => {
       if (!isAllowed(name, picks)) return false;
       if (ACTIVE_ITEMS.has(name) && activeCount >= ACTIVE_CAP) return false;
@@ -384,21 +457,17 @@ window.addEventListener('DOMContentLoaded', () => {
       if (ACTIVE_ITEMS.has(name)) activeCount++;
     };
 
-    // 1) Гарантированные по тиру
     for (let t = 1; t <= 4; t++) {
       const need = counts[t] || 0;
       if (need <= 0) continue;
 
       const pool = shuffle([...TIERS[t]]);
       for (const cand of pool) {
-        // уже набрали в этом тира?
         const haveInTier = picks.filter(x => TIERS[t].includes(x)).length;
         if (haveInTier >= need) break;
-
         if (canAdd(cand)) add(cand);
       }
 
-      // Если не добрали нужное из-за лимита/конфликтов — попытаться добрать именно неактивными из этого же тира
       let haveInTier = picks.filter(x => TIERS[t].includes(x)).length;
       if (haveInTier < need) {
         const nonActive = shuffle(TIERS[t].filter(n => !ACTIVE_ITEMS.has(n)));
@@ -410,7 +479,6 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // 2) Добор до totalWanted — из тиров, где counts[t] === 0
     if (picks.length < totalWanted) {
       const zeroPool = [];
       for (let t = 1; t <= 4; t++) if ((counts[t] || 0) === 0) zeroPool.push(...TIERS[t]);
@@ -422,7 +490,6 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // 3) На всякий случай — общий добор неактивными, если всё ещё меньше totalWanted
     if (picks.length < totalWanted) {
       const nonActiveAll = shuffle(ALL_ITEMS.filter(n => !ACTIVE_ITEMS.has(n)));
       for (const cand of nonActiveAll) {
@@ -434,21 +501,22 @@ window.addEventListener('DOMContentLoaded', () => {
     return picks;
   }
 
-
-  // ===== 5) СОСТОЯНИЕ СПИНА =====
+  // =========================================================
+  // 6) БИЛД — СОСТОЯНИЕ И КНОПКИ
+  // =========================================================
   let currentSlots = [];
   let currentPicks = [];
   let spinning = false;
   let stopping = false;
 
-  // Тюнинг скоростей
-  const speedPx    = 240;          // базовая скорость (px/с) для расчёта длительности остановки
-  const spinSpeed  = speedPx * 10; // линейная скорость во время бесконечной прокрутки
-  const extraSpins = 6;            // «хвост» перед финалом
+  // Базовые скорости (общие)
+  const speedPx     = 240;
+  const spinSpeed   = speedPx * 10;
+  const stopSpeed   = speedPx * 1.5;
+  const decelSpins  = 25;
 
-  // ===== 6) ОБРАБОТЧИКИ КНОПОК =====
   rollBtn.addEventListener('click', async () => {
-    if (spinning || stopping) return; // игнор, пока идёт процесс
+    if (spinning || stopping) return;
 
     resultEl.innerHTML = '';
     warnEl.textContent = '';
@@ -461,12 +529,24 @@ window.addEventListener('DOMContentLoaded', () => {
       4: parseInt(document.getElementById('tier4').value) || 0,
     };
 
-    currentPicks = buildPicks(totalWanted, counts);
+    // Joker: диапазон min-max, выбираем случайное число в диапазоне
+    const jr = parseRangeToMinMax(document.getElementById('joker').value);
+    const jokerCount = (jr.max > 0)
+      ? (jr.min + Math.floor(Math.random() * (jr.max - jr.min + 1)))
+      : 0;
+
+    const baseWanted = Math.max(0, totalWanted - jokerCount);
+    const basePicks = buildPicks(baseWanted, counts);
+
+    // собираем итоговый список слотов (включая Joker как обычный предмет)
+    currentPicks = [...basePicks];
+    for (let i = 0; i < jokerCount; i++) currentPicks.push(JOKER_NAME);
+    shuffle(currentPicks);
+
     if (currentPicks.length < totalWanted) {
-      warnEl.textContent = `Предупреждение: из-за конфликтов сборок удалось выбрать только ${currentPicks.length} из ${totalWanted}.`;
+      warnEl.textContent = `Предупреждение: из-за конфликтов/лимитов удалось выбрать только ${currentPicks.length} из ${totalWanted}.`;
     }
 
-    // Рендер слотов и пуск бесконечного спина
     currentSlots = [];
     currentPicks.forEach(name => {
       const card = document.createElement('div');
@@ -481,8 +561,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
       const cap = document.createElement('div');
       cap.className = 'caption';
-      cap.textContent = name; // сразу показываем текст, затем будет синхронизироваться
-
+      cap.textContent = name;
       slot._caption = cap;
 
       card.appendChild(slot);
@@ -492,12 +571,12 @@ window.addEventListener('DOMContentLoaded', () => {
       currentSlots.push(slot);
     });
 
-    currentSlots.forEach(slot => startLinearSpin(slot, ALL_ITEMS, spinSpeed));
+    // ВАЖНО: крутим по общему пулу картинок (включая Joker)
+    currentSlots.forEach(slot => startLinearSpin(slot, ITEM_POOL, makeImg, spinSpeed));
 
     spinning = true;
     stopBtn.disabled = false;
 
-    // дадим браузеру кадр, чтобы зафиксировать старт
     await new Promise(requestAnimationFrame);
   });
 
@@ -506,24 +585,21 @@ window.addEventListener('DOMContentLoaded', () => {
     stopping = true;
     stopBtn.disabled = true;
 
-    // запустим фазу B для всех слотов параллельно
     const promises = currentSlots.map((slot, i) => {
-      // рандомная задержка 0–300 мс (чтобы не все в одну миллисекунду дёрнулись)
       const delay = Math.random() * 300;
       return new Promise(resolve => {
         setTimeout(() => {
-          stopWithDecel(slot, currentPicks[i], ALL_ITEMS, speedPx * 1.5, 25).then(resolve);
+          stopWithDecel(slot, currentPicks[i], ITEM_POOL, makeImg, stopSpeed, decelSpins).then(resolve);
         }, delay);
       });
     });
 
-    // ждём когда ВСЕ завершат остановку
     await Promise.all(promises);
 
     spinning = false;
     stopping = false;
   });
-    // Клик по "Рандом тиров" — просто заполняем поля #tier1..#tier4
+
   randBtn.addEventListener('click', () => {
     const totalWanted = parseInt(document.getElementById('total').value) || 0;
     const [c1,c2,c3,c4] = splitTotalInto4(totalWanted);
@@ -533,8 +609,130 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('tier3').value = c3;
     document.getElementById('tier4').value = c4;
   });
-});
 
+  // =========================================================
+  // 7) HERO ROLL (3 слота, отдельные кнопки)
+  // =========================================================
+  const HERO_DIR = 'heroes/';
+
+  const HEROES = [
+    { name: 'Abrams',       file: 'Abrams_card.png' },
+    { name: 'Bebop',        file: 'Bebop_card.png' },
+    { name: 'Billy',        file: 'Billy_card.png' },
+    { name: 'Calico',       file: 'Calico_card.png' },
+    { name: 'Drifter',      file: 'Drifter_card.png' },
+    { name: 'Dynamo',       file: 'Dynamo_card.png' },
+    { name: 'Grey_Talon',   file: 'Grey_Talon_card.png' },
+    { name: 'Haze',         file: 'Haze_card.png' },
+    { name: 'Holliday',     file: 'Holliday_card.png' },
+    { name: 'Infernus',     file: 'Infernus_card.png' },
+    { name: 'Ivy',          file: 'Ivy_card.png' },
+    { name: 'Kelvin',       file: 'Kelvin_card.png' },
+    { name: 'Lady Geist',   file: 'Lady_Geist_card.png' },
+    { name: 'Lash',         file: 'Lash_card.png' },
+    { name: 'McGinnis',     file: 'McGinnis_card.png' },
+    { name: 'Mina',         file: 'Mina_card.png' },
+    { name: 'Mirage',       file: 'Mirage_card.png' },
+    { name: 'Mo & Krill',   file: 'Mo_&_Krill_card.png' },
+    { name: 'Paige',        file: 'Paige_card.png' },
+    { name: 'Paradox',      file: 'Paradox_card.png' },
+    { name: 'Pocket',       file: 'Pocket_card.png' },
+    { name: 'Seven',        file: 'Seven_card.png' },
+    { name: 'Shiv',         file: 'Shiv_card.png' },
+    { name: 'Sinclair',     file: 'Sinclair_card.png' },
+    { name: 'Doorman',  file: 'The_Doorman_card.png' },
+    { name: 'Victor',       file: 'Victor_card.png' },
+    { name: 'Vindicta',     file: 'Vindicta_card.png' },
+    { name: 'Viscous',      file: 'Viscous_card.png' },
+    { name: 'Vyper',        file: 'Vyper_card.png' },
+    { name: 'Warden',       file: 'Warden_card.png' },
+    { name: 'Wraith',       file: 'Wraith_card.png' },
+    { name: 'Yamato',       file: 'Yamato_card.png' },
+  ];
+
+  const makeHeroImg = (hero) => {
+    const img = document.createElement('img');
+    img.src = HERO_DIR + hero.file;
+    img.dataset.name = hero.name;
+    return img;
+  };
+
+  const heroResultEl = document.getElementById('heroResult');
+  const rollHeroBtn  = document.getElementById('rollHeroBtn');
+  const stopHeroBtn  = document.getElementById('stopHeroBtn');
+
+  let heroSlots = [];
+  let heroFinal = [];
+  let heroSpinning = false;
+  let heroStopping = false;
+
+  function pickRandomHeroes(n) {
+    const pool = shuffle([...HEROES]);
+    return pool.slice(0, Math.min(n, pool.length));
+  }
+
+  rollHeroBtn.addEventListener('click', async () => {
+    if (heroSpinning || heroStopping) return;
+    if (!HEROES.length) return;
+
+    heroResultEl.innerHTML = '';
+
+    heroFinal = pickRandomHeroes(3);
+    heroSlots = [];
+
+    heroFinal.forEach(h => {
+      const card = document.createElement('div');
+      card.className = 'item';
+
+      const slot = document.createElement('div');
+      slot.className = 'hero-slot';
+
+      const inner = document.createElement('div');
+      inner.className = 'hero-slot-inner';
+      slot.appendChild(inner);
+
+      const cap = document.createElement('div');
+      cap.className = 'caption';
+      cap.textContent = (h.name || '').replace(/_/g,' ');
+      slot._caption = cap;
+
+      card.appendChild(slot);
+      card.appendChild(cap);
+      heroResultEl.appendChild(card);
+
+      heroSlots.push(slot);
+    });
+
+    // Прокрутка героев быстрее в 2.5 раза
+    heroSlots.forEach(slot => startLinearSpin(slot, HEROES, makeHeroImg, spinSpeed * 2.5));
+
+    heroSpinning = true;
+    stopHeroBtn.disabled = false;
+
+    await new Promise(requestAnimationFrame);
+  });
+
+  stopHeroBtn.addEventListener('click', async () => {
+    if (!heroSpinning || heroStopping) return;
+    heroStopping = true;
+    stopHeroBtn.disabled = true;
+
+    const promises = heroSlots.map((slot, i) => {
+      const delay = Math.random() * 300;
+      return new Promise(resolve => {
+        setTimeout(() => {
+          // Остановка героев быстрее в 3 раза
+          stopWithDecel(slot, heroFinal[i], HEROES, makeHeroImg, stopSpeed * 3, decelSpins).then(resolve);
+        }, delay);
+      });
+    });
+
+    await Promise.all(promises);
+
+    heroSpinning = false;
+    heroStopping = false;
+  });
+});
 </script>
 </body>
 </html>
