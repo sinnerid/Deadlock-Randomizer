@@ -117,13 +117,33 @@ window.addEventListener('DOMContentLoaded', () => {
   // =========================================================
   // 8) GAME CONDITIONS (отдельная кнопка + анимация, без повторов)
   // =========================================================
-  const CONDITIONS = [
-    // Добавляй условия сюда:
-    "No jungle for 5 minutes",
-    "Only Tier 1 items until 8:00",
-    "No healing items",
-    "Must contest every objective",
-  ];
+  const CONDITION_GROUPS = {
+    early: [
+      "Не фармить нейтралов 10 минут",
+      "Не бить коробки 10 минут",
+      "Не фармить казики 15 минут"
+    ],
+    combat: [
+      "Не стрелять 5 минут",
+      "Не использовать скиллы 10 минут"
+    ],
+    build: [
+      "Сборка по порядку",
+      "Произваольная сборка",
+      "От нижнего тира к высшему",
+      "От высшего тира к низшему"
+    ]
+  };
+
+  // ЛИМИТ: максимум условий из каждой группы (аналог «лимита тира»)
+  // Меняй цифры как захочешь.
+  const CONDITION_GROUP_LIMITS = {
+    early: 1,
+    combat: 1,
+    build: 1,
+  };
+
+  const CONDITIONS = Object.values(CONDITION_GROUPS).flat();
 
   const condCountEl  = document.getElementById('condCount');
   const condResultEl = document.getElementById('condResult');
@@ -137,8 +157,40 @@ window.addEventListener('DOMContentLoaded', () => {
   let condStopping = false;
 
   function pickUniqueConditions(n) {
-    const pool = shuffle([...CONDITIONS]);
-    return pool.slice(0, Math.min(n, pool.length));
+    // Берём уникально и соблюдаем лимит на группу.
+    const groups = Object.keys(CONDITION_GROUPS);
+
+    // по одному «мешку» на группу
+    const bags = {};
+    for (const g of groups) bags[g] = shuffle([...CONDITION_GROUPS[g]]);
+
+    const picked = [];
+    const pickedSet = new Set();
+    const perGroup = Object.fromEntries(groups.map(g => [g, 0]));
+
+    // чтобы не зациклиться, ограничим количество попыток
+    let guard = 0;
+    const maxGuard = 2000;
+
+    while (picked.length < n && guard++ < maxGuard) {
+      // группы, из которых ещё можно взять (есть элементы и не достигнут лимит)
+      const availableGroups = groups.filter(g => {
+        const lim = (CONDITION_GROUP_LIMITS[g] ?? Infinity);
+        return bags[g].length > 0 && perGroup[g] < lim;
+      });
+      if (!availableGroups.length) break;
+
+      const g = availableGroups[Math.floor(Math.random() * availableGroups.length)];
+      const cand = bags[g].pop();
+      if (!cand) continue;
+      if (pickedSet.has(cand)) continue;
+
+      picked.push(cand);
+      pickedSet.add(cand);
+      perGroup[g]++;
+    }
+
+    return picked;
   }
 
   function makeCondImg(text) {
@@ -171,6 +223,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
   rollCondBtn.addEventListener('click', async () => {
     if (condSpinning || condStopping) return;
+
+    // СБРОС предыдущего ролла условий
+    condWarnEl.textContent = '';
+    condResultEl.innerHTML = '';
+    stopCondBtn.disabled = true;
+    condStopping = false;
+    condSpinning = false;
+    for (const s of condSlots) cancelAnimationFrame(s._raf);
+    condSlots = [];
+
     const requested = Math.max(0, parseInt(condCountEl?.value, 10) || 0);
     if (requested === 0) return;
 
@@ -823,7 +885,13 @@ window.addEventListener('DOMContentLoaded', () => {
     if (heroSpinning || heroStopping) return;
     if (!HEROES.length) return;
 
+    // СБРОС предыдущего ролла героев
     heroResultEl.innerHTML = '';
+    stopHeroBtn.disabled = true;
+    heroStopping = false;
+    heroSpinning = false;
+    for (const s of heroSlots) cancelAnimationFrame(s._raf);
+    heroSlots = [];
 
     const n = Math.max(3, parseInt(heroCountEl?.value, 10) || 3);
     heroFinal = pickRandomHeroes(n);
