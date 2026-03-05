@@ -20,15 +20,13 @@
     display: grid; grid-template-columns: repeat(5, max-content); gap: 12px 18px; align-items: end;
     background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
   }
-  .controls.hero-controls { grid-template-columns: repeat(2, max-content); }
+  .controls.hero-controls { grid-template-columns: repeat(3, max-content); }
 
   label { display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
-  input[type="number"], input[type="text"] {
-    width: 112px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
+  input[type="number"] {
+    width: 84px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
     background: #0f162b; color: var(--text); outline: none;
   }
-  input#total, input#tier1, input#tier2, input#tier3, input#tier4 { width: 84px; }
-
   button {
     padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: linear-gradient(180deg,#1b2a48,#15223d);
     color: var(--text); cursor: pointer; transition: transform .05s ease, box-shadow .2s ease;
@@ -37,10 +35,15 @@
   button:hover { box-shadow: 0 10px 28px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06); }
   button:active { transform: translateY(1px); }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 14px; margin-top: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, max-content)); column-gap: 28px; row-gap: 32px; margin-top: 16px; justify-content: flex-start; }
 
-  /* Увеличенный отступ между слотами героев + отступ слева */
+  /* Увеличенный отступ между слотами героев */
   #heroResult { gap: 75px; margin-top: 48px; margin-left: 48px; }
+
+  /* Условия: отдельные слоты с анимацией */
+  #condResult { gap: 28px; margin-top: 24px; margin-left: 48px; }
+  .cond-slot { width: 220px; height: 110px; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); background: #0f162b; }
+  .cond-slot .slot-inner img { width: 100%; height: 110px; object-fit: contain; display: block; }
 
   .item {
     background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 10px; display: flex; flex-direction: column; align-items: center;
@@ -84,23 +87,151 @@
     <label>Tier 2: <input id="tier2" type="number" min="0" value="0"></label>
     <label>Tier 3: <input id="tier3" type="number" min="0" value="0"></label>
     <label>Tier 4: <input id="tier4" type="number" min="0" value="0"></label>
-    <label>Joker (min-max): <input id="joker" type="text" value="" placeholder="например 1-3"></label>
+    <label>Joker: <input id="joker" type="number" min="0" value="0"></label>
     <button id="rollBtn">Create build</button>
   </div>
 
   <div id="result" class="grid"></div>
   <div id="warn" class="warn"></div>
 
-  <h2>Hero roll (3 cards)</h2>
+  <h2>Hero roll</h2>
   <div class="controls hero-controls" id="heroControls">
+    <label>Heroes (min 3): <input id="heroCount" type="number" min="3" value="3"></label>
     <button id="rollHeroBtn">Roll Hero</button>
     <button id="stopHeroBtn" disabled>Stop</button>
   </div>
 
   <div id="heroResult" class="grid"></div>
+  <h2>Game conditions</h2>
+  <div class="controls" id="condControls" style="grid-template-columns: repeat(3, max-content);">
+    <label>Conditions: <input id="condCount" type="number" min="0" value="0"></label>
+    <button id="rollCondBtn">Roll conditions</button>
+    <button id="stopCondBtn" disabled>Stop</button>
+  </div>
+
+<div id="condResult" class="grid"></div>
+<div id="condWarn" class="warn"></div>
 
 <script>
 window.addEventListener('DOMContentLoaded', () => {
+  // =========================================================
+  // 8) GAME CONDITIONS (отдельная кнопка + анимация, без повторов)
+  // =========================================================
+  const CONDITIONS = [
+    // Добавляй условия сюда:
+    "No jungle for 5 minutes",
+    "Only Tier 1 items until 8:00",
+    "No healing items",
+    "Must contest every objective",
+  ];
+
+  const condCountEl  = document.getElementById('condCount');
+  const condResultEl = document.getElementById('condResult');
+  const condWarnEl   = document.getElementById('condWarn');
+  const rollCondBtn  = document.getElementById('rollCondBtn');
+  const stopCondBtn  = document.getElementById('stopCondBtn');
+
+  let condSlots = [];
+  let condFinal = [];
+  let condSpinning = false;
+  let condStopping = false;
+
+  function pickUniqueConditions(n) {
+    const pool = shuffle([...CONDITIONS]);
+    return pool.slice(0, Math.min(n, pool.length));
+  }
+
+  function makeCondImg(text) {
+    // простой SVG-рендер текста в "картинку" для слота
+    const safe = String(text)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="110" viewBox="0 0 220 110">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2a48"/>
+      <stop offset="1" stop-color="#15223d"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="220" height="110" rx="14" ry="14" fill="url(#g)"/>
+  <text x="110" y="55" text-anchor="middle" dominant-baseline="middle"
+        font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+        font-size="14" fill="#e8f0ff">${safe}</text>
+</svg>`;
+
+    const img = document.createElement('img');
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    img.dataset.name = text;
+    return img;
+  }
+
+  rollCondBtn.addEventListener('click', async () => {
+    if (condSpinning || condStopping) return;
+    const requested = Math.max(0, parseInt(condCountEl?.value, 10) || 0);
+    if (requested === 0) return;
+
+    condFinal = pickUniqueConditions(requested);
+    if (condFinal.length < requested) {
+      condWarnEl.textContent = `Предупреждение: условий всего ${condFinal.length}, запрос был ${requested}.`;
+    }
+
+    condSlots = [];
+    condFinal.forEach(text => {
+      const card = document.createElement('div');
+      card.className = 'item';
+
+      const slot = document.createElement('div');
+      slot.className = 'cond-slot';
+
+      const inner = document.createElement('div');
+      inner.className = 'slot-inner';
+      slot.appendChild(inner);
+
+      const cap = document.createElement('div');
+      cap.className = 'caption';
+      cap.textContent = text;
+      slot._caption = cap;
+
+      card.appendChild(slot);
+      card.appendChild(cap);
+      condResultEl.appendChild(card);
+
+      condSlots.push(slot);
+    });
+
+    // анимация как у предметов
+    condSlots.forEach(slot => startLinearSpin(slot, CONDITIONS, makeCondImg, spinSpeed));
+
+    condSpinning = true;
+    stopCondBtn.disabled = false;
+
+    await new Promise(requestAnimationFrame);
+  });
+
+  stopCondBtn.addEventListener('click', async () => {
+    if (!condSpinning || condStopping) return;
+    condStopping = true;
+    stopCondBtn.disabled = true;
+
+    const promises = condSlots.map((slot, i) => {
+      const delay = Math.random() * 300;
+      return new Promise(resolve => {
+        setTimeout(() => {
+          stopWithDecel(slot, condFinal[i], CONDITIONS, makeCondImg, stopSpeed, decelSpins).then(resolve);
+        }, delay);
+      });
+    });
+
+    await Promise.all(promises);
+
+    condSpinning = false;
+    condStopping = false;
+  });
+
   // =========================================================
   // 0) КНОПКИ ДЛЯ БИЛДА (STOP + Random tier)
   // =========================================================
@@ -135,6 +266,7 @@ window.addEventListener('DOMContentLoaded', () => {
     2: [
       "Active Reload","Backstabber","Fleetfoot","Intensifying Magazine","Kinetic Dash","Long Range","Melee Charge","Mystic Shot",
       "Opening Rounds","Slowing Bullets","Spirit Shredder Bullets","Split Shot","Swift Striker","Titanic Magazine","Weakening Headshot",
+      "Recharging Rush",
       "Battle Vest","Bullet Lifesteal","Debuff Reducer","Enchanter's Emblem","Enduring Speed","Guardian Ward","Healbane","Healing Booster",
       "Reactive Barrier","Restorative Locket","Return Fire","Spirit Lifesteal","Spirit Shielding","Weapon Shielding",
       "Arcane Surge","Bullet Resist Shredder","Cold Front","Compress Cooldown","Duration Extender","Improved Spirit","Mystic Slow",
@@ -143,7 +275,7 @@ window.addEventListener('DOMContentLoaded', () => {
     3: [
       "Alchemical Fire","Berserker","Blood Tribute","Burst Fire","Cultist Sacrifice","Escalating Resilience","Express Shot","Headhunter",
       "Heroic Aura","Hollow Point","Hunter's Aura","Point Blank","Sharpshooter","Spirit Rend","Tesla Bullets","Toxic Bullets","Weighted Shots",
-      "Bullet Resilience","Counterspell","Debuff Remover","Fortitude","Fury Trance","Healing Nova","Lifestrike","Majestic Leap","Metal Skin",
+      "Bullet Resilience","Counterspell","Ballistic Enchantment","Dispel Magic","Fortitude","Fury Trance","Healing Nova","Lifestrike","Majestic Leap","Metal Skin",
       "Rescue Beam","Spirit Resilience","Stamina Mastery","Trophy Collector","Veil Walker","Warp Stone",
       "Decay","Disarming Hex","Greater Expansion","Knockdown","Radiant Regeneration","Rapid Recharge","Silence Wave","Spirit Snatch",
       "Superior Cooldown","Superior Duration","Surge of Power","Tankbuster","Torment Pulse"
@@ -153,17 +285,18 @@ window.addEventListener('DOMContentLoaded', () => {
       "Silencer","Spellslinger","Spiritual Overflow",
       "Cheat Death","Colossus","Divine Barrier","Diviner's Kevlar","Healing Tempo","Infuser","Inhibitor","Juggernaut","Leech","Phantom Strike",
       "Plated Armor","Siphon Bullets","Spellbreaker","Unstoppable","Vampiric Burst","Witchmail",
-      "Arctic Blast","Boundless Spirit","Curse","Echo Shard","Escalating Exposure","Ethereal Shift","Focus Lens","Lightning Scroll",
+      "Arctic Blast","Boundless Spirit","Cursed Relic","Echo Shard","Escalating Exposure","Ethereal Shift","Focus Lens","Lightning Scroll",
       "Magic Carpet","Mercurial Magnum","Mystic Reverb","Refresher","Scourge","Spirit Burn","Transcendent Cooldown","Vortex Web"
     ]
   };
 
   const ALL_ITEMS = [...TIERS[1], ...TIERS[2], ...TIERS[3], ...TIERS[4]];
 
-  // Joker (как обычный предмет в общем пуле)
-  const JOKER_NAME = 'Joker';
-  const JOKER_IMG  = 'images/joker.png'; // ты потом подставишь свою картинку
-  const ITEM_POOL  = [...ALL_ITEMS, JOKER_NAME];
+  // Маппинг: отображаемое имя -> имя для файла картинки (НЕ менять названия картинок)
+  const ITEM_IMAGE_KEY = new Map([
+    ["Cursed Relic", "Curse"],
+    ["Dispel Magic", "Debuff Remover"],
+  ]);
 
   // =========================================================
   // 2) РЕЦЕПТЫ И КОНФЛИКТЫ
@@ -198,8 +331,13 @@ window.addEventListener('DOMContentLoaded', () => {
     "Juggernaut": ["Enduring Speed"],
     "Leech": ["Bullet Lifesteal"],
     "Fury Trance": ["Bullet Lifesteal"],
-    "Debuff Remover": ["Debuff Reducer"],
+
+    // ОБНОВЛЕНО:
+    // Dispel Magic: no longer builds from Debuff Reducer (удалено)
+    // Spellbreaker: now builds out of Debuff Reducer (добавлено)
     "Unstoppable": ["Debuff Reducer"],
+    "Spellbreaker": ["Debuff Reducer"],
+
     "Divine Barrier": ["Guardian Ward"],
     "Leech": ["Spirit Lifesteal"],
     "Infuser": ["Spirit Lifesteal"],
@@ -228,10 +366,10 @@ window.addEventListener('DOMContentLoaded', () => {
   const ACTIVE_ITEMS = new Set([
     "Fleetfoot","Split Shot","Alchemical Fire","Blood Tribute","Cultist Sacrifice","Heroic Aura",
     "Capacitor","Shadow Weave","Healing Rite","Guardian Ward","Restorative Locket","Return Fire",
-    "Debuff Remover","Fury Trance","Healing Nova","Majestic Leap","Metal Skin","Rescue Beam",
+    "Dispel Magic","Fury Trance","Healing Nova","Majestic Leap","Metal Skin","Rescue Beam",
     "Warp Stone","Colossus","Divine Barrier","Infuser","Phantom Strike","Unstoppable","Vampiric Burst",
     "Rusted Barrel","Cold Front","Slowing Hex","Spirit Sap","Decay","Disarming Hex","Knockdown",
-    "Silence Wave","Arctic Blast","Curse","Echo Shard","Ethereal Shift","Focus Lens","Magic Carpet",
+    "Silence Wave","Arctic Blast","Cursed Relic","Echo Shard","Ethereal Shift","Focus Lens","Magic Carpet",
     "Refresher","Scourge","Vortex Web"
   ]);
 
@@ -284,20 +422,16 @@ window.addEventListener('DOMContentLoaded', () => {
   const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
   const isAllowed = (candidate, picked) => !picked.some(p => sameGroup(candidate,p));
 
-  const nameToFile = (name) => {
-    if (name === JOKER_NAME) return JOKER_IMG;
-    return (
-      "images/" +
-      name.toLowerCase()
-        .replace(/['’]/g,"")
-        .replace(/\s+/g,"_")
-        .replace(/[^a-z0-9_]/g,"") +
-      "_sm.webp"
-    );
-  };
+  // ВАЖНО: картинка определяется по ключу (старому имени), а не по отображаемому
+  const nameToFile = (name) =>
+    "images/" +
+    String(ITEM_IMAGE_KEY.get(name) || name).toLowerCase()
+      .replace(/['’]/g,"")
+      .replace(/\s+/g,"_")
+      .replace(/[^a-z0-9_]/g,"") +
+    "_sm.webp";
 
-  const makeImg = (nameOrObj) => {
-    const name = (nameOrObj && typeof nameOrObj === 'object') ? (nameOrObj.name || '') : String(nameOrObj);
+  const makeImg = name => {
     const img = document.createElement('img');
     img.src = nameToFile(name);
     img.dataset.name = name;
@@ -326,20 +460,6 @@ window.addEventListener('DOMContentLoaded', () => {
       cuts[3]-cuts[2],
       cuts[4]-cuts[3],
     ];
-  }
-
-  function parseRangeToMinMax(raw) {
-    const s = String(raw || '').trim();
-    if (!s) return { min: 0, max: 0 };
-
-    // поддержка: "3", "1-3", "1..3", "1—3", "1–3"
-    const norm = s.replace(/[—–]/g,'-').replace(/\.\./g,'-');
-    const m = norm.match(/^\s*(\d+)\s*(?:-\s*(\d+)\s*)?$/);
-    if (!m) return { min: 0, max: 0 };
-
-    const a = Math.max(0, parseInt(m[1], 10) || 0);
-    const b = Math.max(0, parseInt((m[2] ?? m[1]), 10) || 0);
-    return { min: Math.min(a,b), max: Math.max(a,b) };
   }
 
   // =========================================================
@@ -423,10 +543,7 @@ window.addEventListener('DOMContentLoaded', () => {
       stopRaf = requestAnimationFrame(tickCaption);
     });
 
-    const finalName =
-      (finalEntry && typeof finalEntry === 'object')
-        ? (finalEntry.name || '')
-        : String(finalEntry);
+    const finalName = (finalEntry && typeof finalEntry === 'object') ? (finalEntry.name || '') : String(finalEntry);
 
     return new Promise(resolve => {
       inner.addEventListener('transitionend', () => {
@@ -505,11 +622,11 @@ window.addEventListener('DOMContentLoaded', () => {
   // 6) БИЛД — СОСТОЯНИЕ И КНОПКИ
   // =========================================================
   let currentSlots = [];
+  const jokerSlots = [];
   let currentPicks = [];
   let spinning = false;
   let stopping = false;
 
-  // Базовые скорости (общие)
   const speedPx     = 240;
   const spinSpeed   = speedPx * 10;
   const stopSpeed   = speedPx * 1.5;
@@ -520,6 +637,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     resultEl.innerHTML = '';
     warnEl.textContent = '';
+    condResultEl.innerHTML = '';
+    condWarnEl.textContent = '';
 
     const totalWanted = parseInt(document.getElementById('total').value) || 10;
     const counts = {
@@ -529,20 +648,9 @@ window.addEventListener('DOMContentLoaded', () => {
       4: parseInt(document.getElementById('tier4').value) || 0,
     };
 
-    // Joker: диапазон min-max, выбираем случайное число в диапазоне
-    const jr = parseRangeToMinMax(document.getElementById('joker').value);
-    const jokerCount = (jr.max > 0)
-      ? (jr.min + Math.floor(Math.random() * (jr.max - jr.min + 1)))
-      : 0;
+    const jokerCount = parseInt(document.getElementById('joker').value) || 0;
 
-    const baseWanted = Math.max(0, totalWanted - jokerCount);
-    const basePicks = buildPicks(baseWanted, counts);
-
-    // собираем итоговый список слотов (включая Joker как обычный предмет)
-    currentPicks = [...basePicks];
-    for (let i = 0; i < jokerCount; i++) currentPicks.push(JOKER_NAME);
-    shuffle(currentPicks);
-
+    currentPicks = buildPicks(Math.max(0, totalWanted - jokerCount), counts);
     if (currentPicks.length < totalWanted) {
       warnEl.textContent = `Предупреждение: из-за конфликтов/лимитов удалось выбрать только ${currentPicks.length} из ${totalWanted}.`;
     }
@@ -571,8 +679,38 @@ window.addEventListener('DOMContentLoaded', () => {
       currentSlots.push(slot);
     });
 
-    // ВАЖНО: крутим по общему пулу картинок (включая Joker)
-    currentSlots.forEach(slot => startLinearSpin(slot, ITEM_POOL, makeImg, spinSpeed));
+    currentSlots.forEach(slot => startLinearSpin(slot, ALL_ITEMS, makeImg, spinSpeed));
+    // Joker slots (всегда знак вопроса) — оставил как было в текущей версии
+    for (let i = 0; i < jokerCount; i++) {
+      const card = document.createElement('div');
+      card.className = 'item';
+
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+
+      const inner = document.createElement('div');
+      inner.className = 'slot-inner';
+      slot.appendChild(inner);
+
+      const cap = document.createElement('div');
+      cap.className = 'caption';
+      cap.textContent = 'Joker';
+      slot._caption = cap;
+
+      card.appendChild(slot);
+      card.appendChild(cap);
+      resultEl.appendChild(card);
+
+      const makeQuestion = () => {
+        const img = document.createElement('img');
+        img.src = 'images/question.png';
+        img.dataset.name = '?';
+        return img;
+      };
+
+      startLinearSpin(slot, ['?'], makeQuestion, spinSpeed);
+      jokerSlots.push(slot);
+    }
 
     spinning = true;
     stopBtn.disabled = false;
@@ -589,7 +727,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const delay = Math.random() * 300;
       return new Promise(resolve => {
         setTimeout(() => {
-          stopWithDecel(slot, currentPicks[i], ITEM_POOL, makeImg, stopSpeed, decelSpins).then(resolve);
+          stopWithDecel(slot, currentPicks[i], ALL_ITEMS, makeImg, stopSpeed * 1.5, decelSpins).then(resolve);
         }, delay);
       });
     });
@@ -610,44 +748,53 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('tier4').value = c4;
   });
 
+  
+
   // =========================================================
   // 7) HERO ROLL (3 слота, отдельные кнопки)
   // =========================================================
   const HERO_DIR = 'heroes/';
 
   const HEROES = [
-    { name: 'Abrams',       file: 'Abrams_card.png' },
-    { name: 'Bebop',        file: 'Bebop_card.png' },
-    { name: 'Billy',        file: 'Billy_card.png' },
-    { name: 'Calico',       file: 'Calico_card.png' },
-    { name: 'Drifter',      file: 'Drifter_card.png' },
-    { name: 'Dynamo',       file: 'Dynamo_card.png' },
-    { name: 'Grey_Talon',   file: 'Grey_Talon_card.png' },
-    { name: 'Haze',         file: 'Haze_card.png' },
-    { name: 'Holliday',     file: 'Holliday_card.png' },
-    { name: 'Infernus',     file: 'Infernus_card.png' },
-    { name: 'Ivy',          file: 'Ivy_card.png' },
-    { name: 'Kelvin',       file: 'Kelvin_card.png' },
-    { name: 'Lady Geist',   file: 'Lady_Geist_card.png' },
-    { name: 'Lash',         file: 'Lash_card.png' },
-    { name: 'McGinnis',     file: 'McGinnis_card.png' },
-    { name: 'Mina',         file: 'Mina_card.png' },
-    { name: 'Mirage',       file: 'Mirage_card.png' },
-    { name: 'Mo & Krill',   file: 'Mo_&_Krill_card.png' },
-    { name: 'Paige',        file: 'Paige_card.png' },
-    { name: 'Paradox',      file: 'Paradox_card.png' },
-    { name: 'Pocket',       file: 'Pocket_card.png' },
-    { name: 'Seven',        file: 'Seven_card.png' },
-    { name: 'Shiv',         file: 'Shiv_card.png' },
-    { name: 'Sinclair',     file: 'Sinclair_card.png' },
-    { name: 'Doorman',  file: 'The_Doorman_card.png' },
-    { name: 'Victor',       file: 'Victor_card.png' },
-    { name: 'Vindicta',     file: 'Vindicta_card.png' },
-    { name: 'Viscous',      file: 'Viscous_card.png' },
-    { name: 'Vyper',        file: 'Vyper_card.png' },
-    { name: 'Warden',       file: 'Warden_card.png' },
-    { name: 'Wraith',       file: 'Wraith_card.png' },
-    { name: 'Yamato',       file: 'Yamato_card.png' },
+    { name: 'Abrams',        file: 'Abrams_card.png' },
+    { name: 'Bebop',         file: 'Bebop_card.png' },
+    { name: 'Billy',         file: 'Billy_card.png' },
+    { name: 'Calico',        file: 'Calico_card.png' },
+    { name: 'Drifter',       file: 'Drifter_card.png' },
+    { name: 'Dynamo',        file: 'Dynamo_card.png' },
+    { name: 'Grey Talon',    file: 'Grey_Talon_card.png' },
+    { name: 'Haze',          file: 'Haze_card.png' },
+    { name: 'Holliday',      file: 'Holliday_card.png' },
+    { name: 'Infernus',      file: 'Infernus_card.png' },
+    { name: 'Ivy',           file: 'Ivy_card.png' },
+    { name: 'Kelvin',        file: 'Kelvin_card.png' },
+    { name: 'Lady Geist',    file: 'Lady_Geist_card.png' },
+    { name: 'Lash',          file: 'Lash_card.png' },
+    { name: 'McGinnis',      file: 'McGinnis_card.png' },
+    { name: 'Mina',          file: 'Mina_card.png' },
+    { name: 'Mirage',        file: 'Mirage_card.png' },
+    { name: 'Mo & Krill',    file: 'Mo_&_Krill_card.png' },
+    { name: 'Paige',         file: 'Paige_card.png' },
+    { name: 'Paradox',       file: 'Paradox_card.png' },
+    { name: 'Pocket',        file: 'Pocket_card.png' },
+    { name: 'Seven',         file: 'Seven_card.png' },
+    { name: 'Shiv',          file: 'Shiv_card.png' },
+    { name: 'Sinclair',      file: 'Sinclair_card.png' },
+    { name: 'Doorman',       file: 'The_Doorman_card.png' },
+    { name: 'Victor',        file: 'Victor_card.png' },
+    { name: 'Vindicta',      file: 'Vindicta_card.png' },
+    { name: 'Viscous',       file: 'Viscous_card.png' },
+    { name: 'Vyper',         file: 'Vyper_card.png' },
+    { name: 'Warden',        file: 'Warden_card.png' },
+    { name: 'Wraith',        file: 'Wraith_card.png' },
+    { name: 'Yamato',        file: 'Yamato_card.png' },
+
+    { name: 'Graves',        file: 'Graves_card.png' },
+    { name: 'Celeste',       file: 'Celeste_card.png' },
+    { name: 'Apollo',        file: 'Apollo_card.png' },
+    { name: 'Venator',       file: 'Venator_card.png' },
+    { name: 'Rem',           file: 'Rem_card.png' },
+    { name: 'Silver',        file: 'Silver_card.png' },
   ];
 
   const makeHeroImg = (hero) => {
@@ -660,6 +807,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const heroResultEl = document.getElementById('heroResult');
   const rollHeroBtn  = document.getElementById('rollHeroBtn');
   const stopHeroBtn  = document.getElementById('stopHeroBtn');
+  const heroCountEl  = document.getElementById('heroCount');
 
   let heroSlots = [];
   let heroFinal = [];
@@ -677,7 +825,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     heroResultEl.innerHTML = '';
 
-    heroFinal = pickRandomHeroes(3);
+    const n = Math.max(3, parseInt(heroCountEl?.value, 10) || 3);
+    heroFinal = pickRandomHeroes(n);
     heroSlots = [];
 
     heroFinal.forEach(h => {
@@ -703,8 +852,7 @@ window.addEventListener('DOMContentLoaded', () => {
       heroSlots.push(slot);
     });
 
-    // Прокрутка героев быстрее в 2.5 раза
-    heroSlots.forEach(slot => startLinearSpin(slot, HEROES, makeHeroImg, spinSpeed * 2.5));
+    heroSlots.forEach(slot => startLinearSpin(slot, HEROES, makeHeroImg, spinSpeed * 1.7));
 
     heroSpinning = true;
     stopHeroBtn.disabled = false;
@@ -721,7 +869,6 @@ window.addEventListener('DOMContentLoaded', () => {
       const delay = Math.random() * 300;
       return new Promise(resolve => {
         setTimeout(() => {
-          // Остановка героев быстрее в 3 раза
           stopWithDecel(slot, heroFinal[i], HEROES, makeHeroImg, stopSpeed * 3, decelSpins).then(resolve);
         }, delay);
       });
@@ -732,6 +879,7 @@ window.addEventListener('DOMContentLoaded', () => {
     heroSpinning = false;
     heroStopping = false;
   });
+  
 });
 </script>
 </body>
