@@ -23,9 +23,33 @@
   .controls.hero-controls { grid-template-columns: repeat(3, max-content); }
 
   label { display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
+  
+  .number-input-wrapper {
+    display: flex; gap: 6px; align-items: center;
+  }
+  .number-input-wrapper button {
+    width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 600; flex-shrink: 0;
+  }
+  .number-input-wrapper input[type="number"] {
+    width: 50px; padding: 8px; border-radius: 12px; border: 1px solid var(--border);
+    background: #0f162b; color: var(--text); outline: none;
+    text-align: center; font-weight: 500;
+  }
+  
   input[type="number"] {
     width: 84px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
     background: #0f162b; color: var(--text); outline: none;
+  }
+  
+  /* Hide spinner arrows for number inputs */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"][type="number"] {
+    -moz-appearance: textfield;
   }
   button {
     padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: linear-gradient(180deg,#1b2a48,#15223d);
@@ -37,8 +61,19 @@
 
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, max-content)); column-gap: 28px; row-gap: 32px; margin-top: 16px; justify-content: flex-start; }
 
+  /* Items grid: fixed 4 columns, compact size */
+  #result { grid-template-columns: repeat(4, max-content); column-gap: 12px; row-gap: 14px; }
+  #result .slot { width: 80px; height: 80px; }
+  .item-frame { position: relative; width: 100%; height: 110px; flex-shrink: 0; }
+  .item-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  #result .item-frame { height: 80px; padding: 2px; box-sizing: border-box; }
+  #result .item-frame img { width: 100%; height: 100%; object-fit: contain; }
+
   /* Увеличенный отступ между слотами героев */
-  #heroResult { gap: 75px; margin-top: 48px; margin-left: 48px; }
+  #heroResult { gap: 40px; margin-top: 48px; margin-left: 48px; }
+  #heroResult .hero-slot { width: 120px; height: 175px; }
+  #heroResult .hero-slot-inner img { height: 175px; }
+  #heroResult .caption { width: 120px; font-size: 11px; }
 
   /* Условия: отдельные слоты с анимацией */
   #condResult { gap: 28px; margin-top: 24px; margin-left: 48px; }
@@ -53,7 +88,39 @@
   .item:hover { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(0,0,0,.35); }
 
   /* Вертикальный слот предметов */
-  .slot { width: 110px; height: 110px; overflow: hidden; border-radius: 10px; border: 1px solid var(--border); }
+  .slot { position: relative; width: 110px; height: 110px; overflow: hidden; border-radius: 10px; border: 1px solid var(--border); }
+
+  /* Название предмета — оверлей внизу слота */
+  .item-name {
+    position: absolute; bottom: 0; left: 0;
+    width: 100%; min-height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.72);
+    z-index: 4; box-sizing: border-box; padding: 3px 4px;
+  }
+  .item-name p {
+    width: 100%; text-align: center; font-size: 10px; line-height: 1.15;
+    color: #e8f0ff; font-weight: 600; margin: 0;
+    overflow: hidden; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  #result .item {
+    padding: 0; overflow: hidden; border: none; border-radius: 3px;
+    background-size: 100% 100%; box-shadow: none;
+    width: 80px; height: 114px;
+    display: flex; flex-direction: column;
+  }
+  #result .item:hover { transform: none; box-shadow: none; }
+  #result .slot { border: none; border-radius: 0; flex-shrink: 0; }
+  #result .item-name { position: static; flex: 1; min-height: unset; background: transparent; padding: 2px 3px; }
+  #result .item-name p { color: #1a1a1a; font-size: 10px; }
+
+  /* Бейдж тира */
+  .tier-badge { position: absolute; top: 0; right: 0; width: 30px; height: 30px; z-index: 5; pointer-events: none; filter: drop-shadow(-2px 0px 3px rgba(0,0,0,.8)); }
+  .tier-badge-bg { width: 100%; height: 100%; clip-path: polygon(100% 0, 100% 100%, 0 0); }
+  .tier-badge-num { position: absolute; top: 2px; right: 2px; width: 55%; text-align: center; font-size: 10px; color: #020101; font-weight: 900; line-height: 1; }
+  #result .tier-badge { width: 22px; height: 22px; }
+  #result .tier-badge-num { font-size: 8px; }
   .slot-inner { display:flex; flex-direction: column; will-change: transform; }
   .slot-inner img { width: 100%; height: 110px; object-fit: cover; display: block; }
 
@@ -66,10 +133,12 @@
     margin-top: 8px;
     font-size: 12px;
     line-height: 1.2;
+    width: 110px;
     height: calc(1.2em * 2);
     text-align: center;
     color: var(--muted);
     overflow: hidden;
+    word-break: break-word;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -82,12 +151,48 @@
   <h1>Deadlock build randomizer</h1>
 
   <div class="controls" id="buildControls">
-    <label>Total items: <input id="total" type="number" min="1" value="12"></label>
-    <label>Tier 1: <input id="tier1" type="number" min="0" value="0"></label>
-    <label>Tier 2: <input id="tier2" type="number" min="0" value="0"></label>
-    <label>Tier 3: <input id="tier3" type="number" min="0" value="0"></label>
-    <label>Tier 4: <input id="tier4" type="number" min="0" value="0"></label>
-    <label>Joker: <input id="joker" type="number" min="0" value="0"></label>
+    <label>Total items: 
+      <div class="number-input-wrapper">
+        <button class="dec-btn" data-target="total">−</button>
+        <input id="total" type="number" min="1" value="12">
+        <button class="inc-btn" data-target="total">+</button>
+      </div>
+    </label>
+    <label>Tier 1: 
+      <div class="number-input-wrapper">
+        <button class="dec-btn" data-target="tier1">−</button>
+        <input id="tier1" type="number" min="0" value="0">
+        <button class="inc-btn" data-target="tier1">+</button>
+      </div>
+    </label>
+    <label>Tier 2: 
+      <div class="number-input-wrapper">
+        <button class="dec-btn" data-target="tier2">−</button>
+        <input id="tier2" type="number" min="0" value="0">
+        <button class="inc-btn" data-target="tier2">+</button>
+      </div>
+    </label>
+    <label>Tier 3: 
+      <div class="number-input-wrapper">
+        <button class="dec-btn" data-target="tier3">−</button>
+        <input id="tier3" type="number" min="0" value="0">
+        <button class="inc-btn" data-target="tier3">+</button>
+      </div>
+    </label>
+    <label>Tier 4: 
+      <div class="number-input-wrapper">
+        <button class="dec-btn" data-target="tier4">−</button>
+        <input id="tier4" type="number" min="0" value="0">
+        <button class="inc-btn" data-target="tier4">+</button>
+      </div>
+    </label>
+    <label>Joker: 
+      <div class="number-input-wrapper">
+        <button class="dec-btn" data-target="joker">−</button>
+        <input id="joker" type="number" min="0" value="0">
+        <button class="inc-btn" data-target="joker">+</button>
+      </div>
+    </label>
     <button id="rollBtn">Create build</button>
   </div>
 
@@ -96,15 +201,29 @@
 
   <h2>Hero roll</h2>
   <div class="controls hero-controls" id="heroControls">
-    <label>Heroes (min 3): <input id="heroCount" type="number" min="3" value="3"></label>
+    <label>Heroes (min 3): 
+      <div class="number-input-wrapper">
+        <button class="dec-btn" data-target="heroCount">−</button>
+        <input id="heroCount" type="number" min="3" value="3">
+        <button class="inc-btn" data-target="heroCount">+</button>
+      </div>
+    </label>
     <button id="rollHeroBtn">Roll Hero</button>
+    <button id="stopHeroBtn" disabled>Stop</button>
+  </div>
     <button id="stopHeroBtn" disabled>Stop</button>
   </div>
 
   <div id="heroResult" class="grid"></div>
   <h2>Game conditions</h2>
   <div class="controls" id="condControls" style="grid-template-columns: repeat(3, max-content);">
-    <label>Conditions: <input id="condCount" type="number" min="0" value="0"></label>
+    <label>Conditions: 
+      <div class="number-input-wrapper">
+        <button class="dec-btn" data-target="condCount">−</button>
+        <input id="condCount" type="number" min="0" value="0">
+        <button class="inc-btn" data-target="condCount">+</button>
+      </div>
+    </label>
     <button id="rollCondBtn">Roll conditions</button>
     <button id="stopCondBtn" disabled>Stop</button>
   </div>
@@ -354,6 +473,99 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const ALL_ITEMS = [...TIERS[1], ...TIERS[2], ...TIERS[3], ...TIERS[4]];
 
+  // Обратный маппинг: имя предмета → номер тира
+  const ITEM_TIER = new Map();
+  for (const [t, names] of Object.entries(TIERS)) for (const n of names) ITEM_TIER.set(n, Number(t));
+
+  // Маппинг: имя предмета → тип (weapon / vitality / spirit)
+  const ITEM_TYPE = new Map(Object.entries({
+    // T1 Weapon
+    'Close Quarters':'weapon','Extended Magazine':'weapon','Headshot Booster':'weapon',
+    'High Velocity Rounds':'weapon','Monster Rounds':'weapon','Rapid Rounds':'weapon',
+    'Restorative Shot':'weapon','Rusted Barrel':'weapon',
+    // T1 Vitality
+    'Extra Health':'vitality','Extra Regen':'vitality','Extra Stamina':'vitality',
+    'Healing Rite':'vitality','Melee Lifesteal':'vitality','Rebuttal':'vitality','Sprint Boots':'vitality',
+    // T1 Spirit
+    'Extra Charge':'spirit','Extra Spirit':'spirit','Mystic Burst':'spirit',
+    'Mystic Expansion':'spirit','Mystic Regeneration':'spirit','Golden Goose Egg':'spirit','Spirit Strike':'spirit',
+    // T2 Weapon
+    'Active Reload':'weapon','Stalker':'weapon','Fleetfoot':'weapon','Intensifying Magazine':'weapon',
+    'Kinetic Dash':'weapon','Long Range':'weapon','Melee Charge':'weapon','Mystic Shot':'weapon',
+    'Opening Rounds':'weapon','Slowing Bullets':'weapon','Spirit Shredder Bullets':'weapon',
+    'Split Shot':'weapon','Swift Striker':'weapon','Titanic Magazine':'weapon',
+    'Weakening Headshot':'weapon','Recharging Rush':'weapon',
+    // T2 Vitality
+    'Battle Vest':'vitality','Bullet Lifesteal':'vitality','Debuff Reducer':'vitality',
+    "Enchanter's Emblem":'vitality','Enduring Speed':'vitality','Guardian Ward':'vitality',
+    'Healbane':'vitality','Healing Booster':'vitality','Reactive Barrier':'vitality',
+    'Restorative Locket':'vitality','Return Fire':'vitality','Spirit Lifesteal':'vitality',
+    'Spirit Shielding':'vitality','Weapon Shielding':'vitality',
+    // T2 Spirit
+    'Arcane Surge':'spirit','Bullet Resist Shredder':'spirit','Cold Front':'spirit',
+    'Compress Cooldown':'spirit','Duration Extender':'spirit','Improved Spirit':'spirit',
+    'Mystic Slow':'spirit','Mystic Vulnerability':'spirit','Quicksilver Reload':'spirit',
+    'Slowing Hex':'spirit','Spirit Sap':'spirit','Suppressor':'spirit',
+    // T3 Weapon
+    'Alchemical Fire':'weapon','Berserker':'weapon','Blood Tribute':'weapon','Burst Fire':'weapon',
+    'Cultist Sacrifice':'weapon','Escalating Resilience':'weapon','Express Shot':'weapon',
+    'Headhunter':'weapon','Heroic Aura':'weapon','Hollow Point':'weapon',
+    "Hunter's Aura":'weapon','Point Blank':'weapon','Sharpshooter':'weapon',
+    'Spirit Rend':'weapon','Tesla Bullets':'weapon','Toxic Bullets':'weapon','Weighted Shots':'weapon',
+    // T3 Vitality
+    'Bullet Resilience':'vitality','Counterspell':'vitality','Ballistic Enchantment':'vitality',
+    'Dispel Magic':'vitality','Fortitude':'vitality','Fury Trance':'vitality',
+    'Healing Nova':'vitality','Lifestrike':'vitality','Majestic Leap':'vitality',
+    'Metal Skin':'vitality','Rescue Beam':'vitality','Spirit Resilience':'vitality',
+    'Stamina Mastery':'vitality','Trophy Collector':'vitality','Veil Walker':'vitality','Warp Stone':'vitality',
+    // T3 Spirit
+    'Decay':'spirit','Disarming Hex':'spirit','Greater Expansion':'spirit','Knockdown':'spirit',
+    'Radiant Regeneration':'spirit','Rapid Recharge':'spirit','Silence Wave':'spirit',
+    'Spirit Snatch':'spirit','Superior Cooldown':'spirit','Superior Duration':'spirit',
+    'Surge of Power':'spirit','Tankbuster':'spirit','Torment Pulse':'spirit',
+    // T4 Weapon
+    'Armor Piercing Rounds':'weapon','Capacitor':'weapon','Crippling Headshot':'weapon',
+    'Crushing Fists':'weapon','Frenzy':'weapon','Glass Cannon':'weapon','Lucky Shot':'weapon',
+    'Ricoshet':'weapon','Shadow Weave':'weapon','Silencer':'weapon','Spellslinger':'weapon','Spiritual Overflow':'weapon',
+    // T4 Vitality
+    'Cheat Death':'vitality','Colossus':'vitality','Divine Barrier':'vitality',
+    "Diviner's Kevlar":'vitality','Healing Tempo':'vitality','Infuser':'vitality',
+    'Inhibitor':'vitality','Juggernaut':'vitality','Leech':'vitality','Phantom Strike':'vitality',
+    'Plated Armor':'vitality','Siphon Bullets':'vitality','Spellbreaker':'vitality',
+    'Unstoppable':'vitality','Vampiric Burst':'vitality','Witchmail':'vitality',
+    // T4 Spirit
+    'Arctic Blast':'spirit','Boundless Spirit':'spirit','Cursed Relic':'spirit',
+    'Echo Shard':'spirit','Escalating Exposure':'spirit','Ethereal Shift':'spirit',
+    'Focus Lens':'spirit','Lightning Scroll':'spirit','Magic Carpet':'spirit',
+    'Mercurial Magnum':'spirit','Mystic Reverb':'spirit','Refresher':'spirit',
+    'Scourge':'spirit','Spirit Burn':'spirit','Transcendent Cooldown':'spirit','Vortex Web':'spirit',
+  }));
+
+  const cardBackerUrl = (name) => {
+    const type = ITEM_TYPE.get(name);
+    const tier = ITEM_TIER.get(name);
+    if (!type || !tier) return null;
+    return `items/cards/card_backer_${type}_t${tier}_psd.png`;
+  };
+
+  const TIER_COLOR  = { 1: '#8a8a8a', 2: '#7cbb1e', 3: '#4b8fff', 4: '#a64dff' };
+  const TIER_ROMAN  = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+
+  function makeTierBadge(tier) {
+    if (!tier) return null;
+    const wrap = document.createElement('div');
+    wrap.className = 'tier-badge';
+    const bg = document.createElement('div');
+    bg.className = 'tier-badge-bg';
+    bg.style.backgroundColor = TIER_COLOR[tier] || '#8a8a8a';
+    const num = document.createElement('span');
+    num.className = 'tier-badge-num';
+    num.textContent = TIER_ROMAN[tier] || '';
+    wrap.appendChild(bg);
+    wrap.appendChild(num);
+    return wrap;
+  }
+
   // Маппинг: отображаемое имя -> имя для файла картинки (НЕ менять названия картинок)
   const ITEM_IMAGE_KEY = new Map([
     ["Cursed Relic", "Curse"],
@@ -487,7 +699,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // ВАЖНО: картинка определяется по ключу (старому имени), а не по отображаемому
   const nameToFile = (name) =>
-    "images/" +
+    "items/" +
     String(ITEM_IMAGE_KEY.get(name) || name).toLowerCase()
       .replace(/['’]/g,"")
       .replace(/\s+/g,"_")
@@ -495,10 +707,15 @@ window.addEventListener('DOMContentLoaded', () => {
     "_sm.webp";
 
   const makeImg = name => {
+    const frame = document.createElement('div');
+    frame.className = 'item-frame';
+    frame.dataset.name = name;
     const img = document.createElement('img');
     img.src = nameToFile(name);
-    img.dataset.name = name;
-    return img;
+    frame.appendChild(img);
+    const badge = makeTierBadge(ITEM_TIER.get(name));
+    if (badge) frame.appendChild(badge);
+    return frame;
   };
 
   function getTranslateY(el){
@@ -722,6 +939,8 @@ window.addEventListener('DOMContentLoaded', () => {
     currentPicks.forEach(name => {
       const card = document.createElement('div');
       card.className = 'item';
+      const backer = cardBackerUrl(name);
+      if (backer) card.style.backgroundImage = `url('${backer}')`;
 
       const slot = document.createElement('div');
       slot.className = 'slot';
@@ -730,13 +949,15 @@ window.addEventListener('DOMContentLoaded', () => {
       inner.className = 'slot-inner';
       slot.appendChild(inner);
 
-      const cap = document.createElement('div');
-      cap.className = 'caption';
+      const nameOverlay = document.createElement('div');
+      nameOverlay.className = 'item-name';
+      const cap = document.createElement('p');
       cap.textContent = name;
+      nameOverlay.appendChild(cap);
       slot._caption = cap;
 
       card.appendChild(slot);
-      card.appendChild(cap);
+      card.appendChild(nameOverlay);
       resultEl.appendChild(card);
 
       currentSlots.push(slot);
@@ -755,18 +976,20 @@ window.addEventListener('DOMContentLoaded', () => {
       inner.className = 'slot-inner';
       slot.appendChild(inner);
 
-      const cap = document.createElement('div');
-      cap.className = 'caption';
+      const nameOverlay = document.createElement('div');
+      nameOverlay.className = 'item-name';
+      const cap = document.createElement('p');
       cap.textContent = 'Joker';
+      nameOverlay.appendChild(cap);
       slot._caption = cap;
 
       card.appendChild(slot);
-      card.appendChild(cap);
+      card.appendChild(nameOverlay);
       resultEl.appendChild(card);
 
       const makeQuestion = () => {
         const img = document.createElement('img');
-        img.src = 'images/question.png';
+        img.src = 'items/question.png';
         img.dataset.name = '?';
         return img;
       };
@@ -948,8 +1171,36 @@ window.addEventListener('DOMContentLoaded', () => {
     heroSpinning = false;
     heroStopping = false;
   });
+
+  // =========================================================
+  // ЧИСЛО ИНПУТ КОНТРОЛЛЕРЫ (+/- КНОПКИ)
+  // =========================================================
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.inc-btn, .dec-btn');
+    if (!btn) return;
+
+    const target = btn.dataset.target;
+    const input = document.getElementById(target);
+    if (!input) return;
+
+    let value = parseInt(input.value, 10) || 0;
+    const min = parseInt(input.min, 10) || 0;
+    const max = parseInt(input.max, 10);
+
+    if (btn.classList.contains('inc-btn')) {
+      value++;
+      if (max !== undefined && value > max) value = max;
+    } else if (btn.classList.contains('dec-btn')) {
+      value--;
+      if (value < min) value = min;
+    }
+
+    input.value = value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
   
 });
+
 </script>
 </body>
 </html>
