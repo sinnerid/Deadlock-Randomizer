@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(python3 -c ':*)",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:assets.deadlock-api.com)",
+      "WebFetch(domain:assets-bucket.deadlock-api.com)"
     ]
   }
 }

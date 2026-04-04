@@ -2,18 +2,46 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
 <title>Deadlock — рандомайзер + Hero ролл (вертикальная прокрутка)</title>
 <style>
-  :root {
-    --bg: #0b1020;
-    --card: #11172a;
-    --accent: #7cc7ff;
-    --text: #e8f0ff;
-    --muted: #9ab0d1;
-    --border: #1d2743;
+  @font-face {
+    font-family: 'Forevs Demo';
+    src: url('fonts/Forevs Demo/forevsdemo-bold.otf') format('opentype');
+    font-weight: 700;
   }
-  body { background: var(--bg); color: var(--text); margin: 24px; font-family: Inter, system-ui, sans-serif; }
-  h1 { margin: 0 0 16px; letter-spacing: .3px; }
+  @font-face {
+    font-family: 'Forevs Demo';
+    src: url('fonts/Forevs Demo/forevsdemo-medium.otf') format('opentype');
+    font-weight: 500;
+  }
+  @font-face {
+    font-family: 'Radiance';
+    src: url('fonts/Radiance/radiance-regular.otf') format('opentype');
+    font-weight: 400;
+  }
+  @font-face {
+    font-family: 'Radiance';
+    src: url('fonts/Radiance/radiance-semibold.otf') format('opentype');
+    font-weight: 600;
+  }
+  @font-face {
+    font-family: 'Radiance';
+    src: url('fonts/Radiance/radiance-bold.otf') format('opentype');
+    font-weight: 700;
+  }
+
+  :root {
+    --bg: #1c1508;
+    --card: rgba(42, 32, 16, 0.82);
+    --accent: #c8922a;
+    --text: #f5ead6;
+    --muted: #b09870;
+    --border: #5a4828;
+  }
+  body { background: var(--bg); color: var(--text); margin: 24px; font-family: 'Radiance', Inter, system-ui, sans-serif; background-size: cover; background-position: center; background-attachment: fixed; }
+  h1 { margin: 0 0 16px; letter-spacing: .3px; font-family: 'Forevs Demo', sans-serif; font-weight: 700; }
   h2 { margin: 18px 0 10px; letter-spacing: .2px; font-size: 16px; color: var(--text); }
 
   .controls {
@@ -33,13 +61,13 @@
   }
   .number-input-wrapper input[type="number"] {
     width: 50px; padding: 8px; border-radius: 12px; border: 1px solid var(--border);
-    background: #0f162b; color: var(--text); outline: none;
+    background: #2a1e0e; color: var(--text); outline: none;
     text-align: center; font-weight: 500;
   }
   
   input[type="number"] {
     width: 84px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
-    background: #0f162b; color: var(--text); outline: none;
+    background: #2a1e0e; color: var(--text); outline: none;
   }
   
   /* Hide spinner arrows for number inputs */
@@ -52,9 +80,10 @@
     -moz-appearance: textfield;
   }
   button {
-    padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: linear-gradient(180deg,#1b2a48,#15223d);
+    padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: linear-gradient(180deg,#4a3518,#32240e);
     color: var(--text); cursor: pointer; transition: transform .05s ease, box-shadow .2s ease;
     box-shadow: 0 6px 18px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
+    font-family: 'Radiance', Inter, system-ui, sans-serif;
   }
   button:hover { box-shadow: 0 10px 28px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06); }
   button:active { transform: translateY(1px); }
@@ -62,7 +91,7 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, max-content)); column-gap: 28px; row-gap: 32px; margin-top: 16px; justify-content: flex-start; }
 
   /* Items grid: fixed 4 columns, compact size */
-  #result { grid-template-columns: repeat(4, max-content); column-gap: 12px; row-gap: 14px; }
+  #result { grid-template-columns: repeat(4, max-content); column-gap: 12px; row-gap: 14px; margin-top: 0; }
   #result .slot { width: 80px; height: 80px; }
   .item-frame { position: relative; width: 100%; height: 110px; flex-shrink: 0; }
   .item-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -77,7 +106,7 @@
 
   /* Условия: отдельные слоты с анимацией */
   #condResult { gap: 28px; margin-top: 24px; margin-left: 48px; }
-  .cond-slot { width: 220px; height: 110px; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); background: #0f162b; }
+  .cond-slot { width: 220px; height: 110px; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); background: #2a1e0e; }
   .cond-slot .slot-inner img { width: 100%; height: 110px; object-fit: contain; display: block; }
 
   .item {
@@ -99,33 +128,102 @@
     z-index: 4; box-sizing: border-box; padding: 3px 4px;
   }
   .item-name p {
-    width: 100%; text-align: center; font-size: 10px; line-height: 1.15;
-    color: #e8f0ff; font-weight: 600; margin: 0;
+    width: 100%; text-align: center; font-size: 11.36px; line-height: 1.1;
+    color: #020101; font-weight: 700; margin: 0; padding: 0 2px;
+    font-family: 'Rajdhani', sans-serif;
     overflow: hidden; display: -webkit-box;
     -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    text-overflow: ellipsis;
   }
-  #result .item {
-    padding: 0; overflow: hidden; border: none; border-radius: 3px;
-    background-size: 100% 100%; box-shadow: none;
-    width: 80px; height: 114px;
+  @keyframes card-deal {
+    0%   { opacity: 0; transform: translateY(-18px) scale(0.82) rotateX(30deg); }
+    60%  { opacity: 1; transform: translateY(3px) scale(1.03) rotateX(0deg); }
+    100% { opacity: 1; transform: translateY(0) scale(1) rotateX(0deg); }
+  }
+  .flip-wrapper.dealing {
+    animation: card-deal 0.35s cubic-bezier(.25,.8,.25,1) both;
+  }
+
+  /* Flip card */
+  .flip-wrapper {
+    width: 95px; height: 134px;
+    perspective: 600px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .flip-wrapper:hover .flipper:not(.flipped) { transform: rotateY(10deg); }
+  .flip-wrapper:not(:has(.flipper.flipped)):hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 0 10px 2px rgba(200, 146, 42, 0.45),
+      0 0 28px 6px rgba(200, 146, 42, 0.2),
+      0 8px 20px rgba(0,0,0,0.4);
+  }
+  .flipper {
+    width: 100%; height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(.4,0,.2,1);
+  }
+  .flipper.flipped { transform: rotateY(180deg); }
+  .card-front, .card-back {
+    position: absolute; inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .card-front {
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card-front::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      repeating-linear-gradient(
+        45deg,
+        rgba(255,255,255,0.18) 0px,
+        rgba(255,255,255,0.18) 1px,
+        transparent 1px,
+        transparent 8px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        rgba(255,255,255,0.18) 0px,
+        rgba(255,255,255,0.18) 1px,
+        transparent 1px,
+        transparent 8px
+      ),
+      url('items/cards/card_backer_weapon_t1_psd.png');
+    background-size: auto, cover;
+    filter: grayscale(0.3) brightness(0.6) sepia(0.5);
+    border-radius: 6px;
+  }
+  .card-front-logo {
+    width: 52px; height: 52px;
+    opacity: 0.6;
+    position: relative; z-index: 1;
+  }
+  .card-back {
+    transform: rotateY(180deg);
     display: flex; flex-direction: column;
   }
-  #result .item:hover { transform: none; box-shadow: none; }
-  #result .slot { border: none; border-radius: 0; flex-shrink: 0; }
-  #result .item-name { position: static; flex: 1; min-height: unset; background: transparent; padding: 2px 3px; }
-  #result .item-name p { color: #1a1a1a; font-size: 10px; }
+  .card-back .slot { flex-shrink: 0; border: none; border-radius: 0; }
+  .card-back .item-name { position: static; flex: 1; min-height: unset; background: transparent; padding: 2px 3px; }
+  .card-back .item-name p { color: #020101; font-size: 13px; }
 
   /* Бейдж тира */
   .tier-badge { position: absolute; top: 0; right: 0; width: 30px; height: 30px; z-index: 5; pointer-events: none; filter: drop-shadow(-2px 0px 3px rgba(0,0,0,.8)); }
   .tier-badge-bg { width: 100%; height: 100%; clip-path: polygon(100% 0, 100% 100%, 0 0); }
   .tier-badge-num { position: absolute; top: 2px; right: 2px; width: 55%; text-align: center; font-size: 10px; color: #020101; font-weight: 900; line-height: 1; }
-  #result .tier-badge { width: 22px; height: 22px; }
-  #result .tier-badge-num { font-size: 8px; }
+  #result .tier-badge { width: 28px; height: 28px; }
+  #result .tier-badge-num { font-size: 10px; }
   .slot-inner { display:flex; flex-direction: column; will-change: transform; }
   .slot-inner img { width: 100%; height: 110px; object-fit: cover; display: block; }
 
   /* Вертикальный слот героя (карта) */
-  .hero-slot { width: 180px; height: 260px; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); background: #0f162b; }
+  .hero-slot { width: 180px; height: 260px; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); background: #2a1e0e; }
   .hero-slot-inner { display:flex; flex-direction: column; will-change: transform; }
   .hero-slot-inner img { width: 100%; height: 260px; object-fit: contain; display: block; }
 
@@ -145,59 +243,91 @@
   }
 
   .warn { color:#ff8282; font-size:12px; margin-top: 8px; }
+  .total-cost {
+    font-size: 13px; color: var(--text); font-weight: 600;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 14px;
+    display: flex; align-items: center; gap: 6px;
+    min-height: 38px; box-sizing: border-box; white-space: nowrap;
+  }
+  .total-cost .souls-icon { height: 16px; width: auto; vertical-align: middle; margin-left: 2px; }
+
+  /* Build section: items left, controls right */
+  .build-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  .build-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  #buildControls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    grid-template-columns: unset;
+  }
+  #buildControls label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
 </style>
 </head>
 <body>
   <h1>Deadlock build randomizer</h1>
 
-  <div class="controls" id="buildControls">
-    <label>Total items: 
-      <div class="number-input-wrapper">
-        <button class="dec-btn" data-target="total">−</button>
-        <input id="total" type="number" min="1" value="12">
-        <button class="inc-btn" data-target="total">+</button>
+  <div class="build-layout">
+    <div class="build-sidebar">
+      <div class="controls" id="buildControls">
+        <label>Total items:
+          <div class="number-input-wrapper">
+            <button class="dec-btn" data-target="total">−</button>
+            <input id="total" type="number" min="1" value="12">
+            <button class="inc-btn" data-target="total">+</button>
+          </div>
+        </label>
+        <label>Tier 1:
+          <div class="number-input-wrapper">
+            <button class="dec-btn" data-target="tier1">−</button>
+            <input id="tier1" type="number" min="0" value="0">
+            <button class="inc-btn" data-target="tier1">+</button>
+          </div>
+        </label>
+        <label>Tier 2:
+          <div class="number-input-wrapper">
+            <button class="dec-btn" data-target="tier2">−</button>
+            <input id="tier2" type="number" min="0" value="0">
+            <button class="inc-btn" data-target="tier2">+</button>
+          </div>
+        </label>
+        <label>Tier 3:
+          <div class="number-input-wrapper">
+            <button class="dec-btn" data-target="tier3">−</button>
+            <input id="tier3" type="number" min="0" value="0">
+            <button class="inc-btn" data-target="tier3">+</button>
+          </div>
+        </label>
+        <label>Tier 4:
+          <div class="number-input-wrapper">
+            <button class="dec-btn" data-target="tier4">−</button>
+            <input id="tier4" type="number" min="0" value="0">
+            <button class="inc-btn" data-target="tier4">+</button>
+          </div>
+        </label>
+        <button id="rollBtn">Create build</button>
       </div>
-    </label>
-    <label>Tier 1: 
-      <div class="number-input-wrapper">
-        <button class="dec-btn" data-target="tier1">−</button>
-        <input id="tier1" type="number" min="0" value="0">
-        <button class="inc-btn" data-target="tier1">+</button>
-      </div>
-    </label>
-    <label>Tier 2: 
-      <div class="number-input-wrapper">
-        <button class="dec-btn" data-target="tier2">−</button>
-        <input id="tier2" type="number" min="0" value="0">
-        <button class="inc-btn" data-target="tier2">+</button>
-      </div>
-    </label>
-    <label>Tier 3: 
-      <div class="number-input-wrapper">
-        <button class="dec-btn" data-target="tier3">−</button>
-        <input id="tier3" type="number" min="0" value="0">
-        <button class="inc-btn" data-target="tier3">+</button>
-      </div>
-    </label>
-    <label>Tier 4: 
-      <div class="number-input-wrapper">
-        <button class="dec-btn" data-target="tier4">−</button>
-        <input id="tier4" type="number" min="0" value="0">
-        <button class="inc-btn" data-target="tier4">+</button>
-      </div>
-    </label>
-    <label>Joker: 
-      <div class="number-input-wrapper">
-        <button class="dec-btn" data-target="joker">−</button>
-        <input id="joker" type="number" min="0" value="0">
-        <button class="inc-btn" data-target="joker">+</button>
-      </div>
-    </label>
-    <button id="rollBtn">Create build</button>
+      <div id="warn" class="warn"></div>
+      <div id="totalCost" class="total-cost"><span>Total cost:</span><strong>???<img src="items/souls/Souls.webp" class="souls-icon" style="opacity:0"></strong></div>
+    </div>
+    <div id="result" class="grid"></div>
   </div>
-
-  <div id="result" class="grid"></div>
-  <div id="warn" class="warn"></div>
 
   <h2>Hero roll</h2>
   <div class="controls hero-controls" id="heroControls">
@@ -232,6 +362,15 @@
 <div id="condWarn" class="warn"></div>
 
 <script>
+// Рандомный фон из папки backgrounds
+(function () {
+  const BG_FILES = [
+    'Background_Buildings.png',
+  ];
+  const file = BG_FILES[Math.floor(Math.random() * BG_FILES.length)];
+  document.body.style.backgroundImage = `url('backgrounds/${file}')`;
+})();
+
 window.addEventListener('DOMContentLoaded', () => {
   // =========================================================
   // 8) GAME CONDITIONS (отдельная кнопка + анимация, без повторов)
@@ -324,8 +463,8 @@ window.addEventListener('DOMContentLoaded', () => {
 <svg xmlns="http://www.w3.org/2000/svg" width="220" height="110" viewBox="0 0 220 110">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1b2a48"/>
-      <stop offset="1" stop-color="#15223d"/>
+      <stop offset="0" stop-color="#2e2010"/>
+      <stop offset="1" stop-color="#201608"/>
     </linearGradient>
   </defs>
   <rect x="0" y="0" width="220" height="110" rx="14" ry="14" fill="url(#g)"/>
@@ -418,13 +557,13 @@ window.addEventListener('DOMContentLoaded', () => {
   // =========================================================
   const buildControls = document.getElementById('buildControls');
 
-  let stopBtn = document.getElementById('stopBtn');
-  if (!stopBtn) {
-    stopBtn = document.createElement('button');
-    stopBtn.id = 'stopBtn';
-    stopBtn.textContent = 'STOP';
-    stopBtn.disabled = true;
-    buildControls.appendChild(stopBtn);
+  let revealAllBtn = document.getElementById('revealAllBtn');
+  if (!revealAllBtn) {
+    revealAllBtn = document.createElement('button');
+    revealAllBtn.id = 'revealAllBtn';
+    revealAllBtn.textContent = 'Reveal All';
+    revealAllBtn.disabled = true;
+    buildControls.appendChild(revealAllBtn);
   }
 
   let randBtn = document.getElementById('randBtn');
@@ -541,6 +680,12 @@ window.addEventListener('DOMContentLoaded', () => {
     'Scourge':'spirit','Spirit Burn':'spirit','Transcendent Cooldown':'spirit','Vortex Web':'spirit',
   }));
 
+  // API CDN image overrides (populated by initFromAPI)
+  const API_ITEM_IMAGE = new Map(); // display name → CDN image URL
+  let SOULS_ICON_URL = '';
+  const TIER_COST = { 1: 800, 2: 1600, 3: 3200, 4: 6400 }; // fallback, overwritten by API
+  const getItemCost = (name) => TIER_COST[ITEM_TIER.get(name)] ?? 0;
+
   const cardBackerUrl = (name) => {
     const type = ITEM_TYPE.get(name);
     const tier = ITEM_TIER.get(name);
@@ -548,16 +693,17 @@ window.addEventListener('DOMContentLoaded', () => {
     return `items/cards/card_backer_${type}_t${tier}_psd.png`;
   };
 
-  const TIER_COLOR  = { 1: '#8a8a8a', 2: '#7cbb1e', 3: '#4b8fff', 4: '#a64dff' };
+  const TYPE_COLOR  = { vitality: '#7cbb1e', spirit: '#a64dff', weapon: '#ec981a' };
   const TIER_ROMAN  = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
 
-  function makeTierBadge(tier) {
+  function makeTierBadge(tier, name) {
     if (!tier) return null;
+    const type = ITEM_TYPE.get(name);
     const wrap = document.createElement('div');
     wrap.className = 'tier-badge';
     const bg = document.createElement('div');
     bg.className = 'tier-badge-bg';
-    bg.style.backgroundColor = TIER_COLOR[tier] || '#8a8a8a';
+    bg.style.backgroundColor = TYPE_COLOR[type] || '#8a8a8a';
     const num = document.createElement('span');
     num.className = 'tier-badge-num';
     num.textContent = TIER_ROMAN[tier] || '';
@@ -711,9 +857,9 @@ window.addEventListener('DOMContentLoaded', () => {
     frame.className = 'item-frame';
     frame.dataset.name = name;
     const img = document.createElement('img');
-    img.src = nameToFile(name);
+    img.src = API_ITEM_IMAGE.get(name) || nameToFile(name);
     frame.appendChild(img);
-    const badge = makeTierBadge(ITEM_TIER.get(name));
+    const badge = makeTierBadge(ITEM_TIER.get(name), name);
     if (badge) frame.appendChild(badge);
     return frame;
   };
@@ -899,26 +1045,93 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================
-  // 6) БИЛД — СОСТОЯНИЕ И КНОПКИ
+  // 6) БИЛД — ФЛИП-КАРТЫ
   // =========================================================
-  let currentSlots = [];
-  const jokerSlots = [];
   let currentPicks = [];
-  let spinning = false;
-  let stopping = false;
+  let flippedCount = 0;
 
-  const speedPx     = 240;
-  const spinSpeed   = speedPx * 10;
-  const stopSpeed   = speedPx * 1.5;
-  const decelSpins  = 25;
+  function makeFlipCard(name) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flip-wrapper';
 
-  rollBtn.addEventListener('click', async () => {
-    if (spinning || stopping) return;
+    const flipper = document.createElement('div');
+    flipper.className = 'flipper';
 
+    // Лицевая сторона (рубашка)
+    const front = document.createElement('div');
+    front.className = 'card-front';
+    const logo = document.createElement('img');
+    logo.className = 'card-front-logo';
+    logo.src = 'items/cards/Deadlock_logo.png';
+    front.appendChild(logo);
+
+    // Обратная сторона (предмет)
+    const back = document.createElement('div');
+    back.className = 'card-back';
+
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.style.cssText = 'width:100%;height:94px;border:none;border-radius:0;flex-shrink:0;padding:1px;box-sizing:border-box;';
+    const inner = document.createElement('div');
+    inner.className = 'slot-inner';
+    const img = document.createElement('img');
+    img.src = API_ITEM_IMAGE.get(name) || nameToFile(name);
+    img.style.cssText = 'width:100%;height:86px;object-fit:contain;display:block;border-radius:8px;';
+    inner.appendChild(img);
+    const badge = makeTierBadge(ITEM_TIER.get(name), name);
+    if (badge) slot.appendChild(badge);
+    slot.appendChild(inner);
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'item-name';
+    nameDiv.style.cssText = 'position:static;flex:1;min-height:unset;background:transparent;padding:2px 3px;';
+    const cap = document.createElement('p');
+    cap.textContent = name;
+    cap.style.cssText = 'color:#020101;font-size:13px;font-family:Rajdhani,sans-serif;font-weight:700;margin:0;text-align:center;line-height:1.1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;';
+    nameDiv.appendChild(cap);
+
+    const backer = cardBackerUrl(name);
+    if (backer) back.style.backgroundImage = `url('${backer}')`;
+    back.style.backgroundSize = '100% 100%';
+
+    back.appendChild(slot);
+    back.appendChild(nameDiv);
+
+    flipper.appendChild(front);
+    flipper.appendChild(back);
+    wrapper.appendChild(flipper);
+
+    wrapper.addEventListener('click', () => flipCard(wrapper));
+    return wrapper;
+  }
+
+  function flipCard(wrapper) {
+    const flipper = wrapper.querySelector('.flipper');
+    if (flipper.classList.contains('flipped')) return;
+    flipper.classList.add('flipped');
+    flippedCount++;
+    checkAllFlipped();
+  }
+
+  function checkAllFlipped() {
+    const total = resultEl.querySelectorAll('.flip-wrapper').length;
+    if (flippedCount >= total && total > 0) {
+      revealAllBtn.disabled = true;
+      showTotalCost();
+    }
+  }
+
+  function showTotalCost() {
+    const totalCostEl = document.getElementById('totalCost');
+    const total = currentPicks.reduce((sum, name) => sum + getItemCost(name), 0);
+    const soulsImg = `<img src="items/souls/Souls.webp" class="souls-icon">`;
+    totalCostEl.innerHTML = `<span>Total cost:</span><strong>${total.toLocaleString()} ${soulsImg}</strong>`;
+  }
+
+  rollBtn.addEventListener('click', () => {
     resultEl.innerHTML = '';
     warnEl.textContent = '';
-    condResultEl.innerHTML = '';
-    condWarnEl.textContent = '';
+    document.getElementById('totalCost').innerHTML = '<span>Total cost:</span><strong>???<img src="items/souls/Souls.webp" class="souls-icon" style="opacity:0"></strong>';
 
     const totalWanted = parseInt(document.getElementById('total').value) || 10;
     const counts = {
@@ -927,101 +1140,25 @@ window.addEventListener('DOMContentLoaded', () => {
       3: parseInt(document.getElementById('tier3').value) || 0,
       4: parseInt(document.getElementById('tier4').value) || 0,
     };
+    currentPicks = buildPicks(totalWanted, counts);
+    flippedCount = 0;
 
-    const jokerCount = parseInt(document.getElementById('joker').value) || 0;
-
-    currentPicks = buildPicks(Math.max(0, totalWanted - jokerCount), counts);
     if (currentPicks.length < totalWanted) {
       warnEl.textContent = `Предупреждение: из-за конфликтов/лимитов удалось выбрать только ${currentPicks.length} из ${totalWanted}.`;
     }
 
-    currentSlots = [];
-    currentPicks.forEach(name => {
-      const card = document.createElement('div');
-      card.className = 'item';
-      const backer = cardBackerUrl(name);
-      if (backer) card.style.backgroundImage = `url('${backer}')`;
-
-      const slot = document.createElement('div');
-      slot.className = 'slot';
-
-      const inner = document.createElement('div');
-      inner.className = 'slot-inner';
-      slot.appendChild(inner);
-
-      const nameOverlay = document.createElement('div');
-      nameOverlay.className = 'item-name';
-      const cap = document.createElement('p');
-      cap.textContent = name;
-      nameOverlay.appendChild(cap);
-      slot._caption = cap;
-
-      card.appendChild(slot);
-      card.appendChild(nameOverlay);
+    const allCards = currentPicks.map(name => makeFlipCard(name, false));
+    allCards.forEach((card, i) => {
+      card.style.animationDelay = `${i * 60}ms`;
+      card.classList.add('dealing');
       resultEl.appendChild(card);
-
-      currentSlots.push(slot);
     });
 
-    currentSlots.forEach(slot => startLinearSpin(slot, ALL_ITEMS, makeImg, spinSpeed));
-    // Joker slots (всегда знак вопроса) — оставил как было в текущей версии
-    for (let i = 0; i < jokerCount; i++) {
-      const card = document.createElement('div');
-      card.className = 'item';
-
-      const slot = document.createElement('div');
-      slot.className = 'slot';
-
-      const inner = document.createElement('div');
-      inner.className = 'slot-inner';
-      slot.appendChild(inner);
-
-      const nameOverlay = document.createElement('div');
-      nameOverlay.className = 'item-name';
-      const cap = document.createElement('p');
-      cap.textContent = 'Joker';
-      nameOverlay.appendChild(cap);
-      slot._caption = cap;
-
-      card.appendChild(slot);
-      card.appendChild(nameOverlay);
-      resultEl.appendChild(card);
-
-      const makeQuestion = () => {
-        const img = document.createElement('img');
-        img.src = 'items/question.png';
-        img.dataset.name = '?';
-        return img;
-      };
-
-      startLinearSpin(slot, ['?'], makeQuestion, spinSpeed);
-      jokerSlots.push(slot);
-    }
-
-    spinning = true;
-    stopBtn.disabled = false;
-
-    await new Promise(requestAnimationFrame);
+    revealAllBtn.disabled = false;
   });
 
-  stopBtn.addEventListener('click', async () => {
-    if (!spinning || stopping) return;
-    stopping = true;
-    stopBtn.disabled = true;
-
-    const promises = currentSlots.map((slot, i) => {
-      const delay = Math.random() * 300;
-      return new Promise(resolve => {
-        setTimeout(() => {
-          stopWithDecel(slot, currentPicks[i], ALL_ITEMS, makeImg, stopSpeed * 1.5, decelSpins).then(resolve);
-        }, delay);
-      });
-    });
-
-    await Promise.all(promises);
-
-    spinning = false;
-    stopping = false;
+  revealAllBtn.addEventListener('click', () => {
+    resultEl.querySelectorAll('.flip-wrapper').forEach(w => flipCard(w));
   });
 
   randBtn.addEventListener('click', () => {
@@ -1085,7 +1222,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const makeHeroImg = (hero) => {
     const img = document.createElement('img');
-    img.src = HERO_DIR + hero.file;
+    img.src = hero.imageUrl || (HERO_DIR + hero.file);
     img.dataset.name = hero.name;
     return img;
   };
@@ -1173,6 +1310,90 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // =========================================================
+  // API INTEGRATION
+  // =========================================================
+  async function initFromAPI() {
+    const statusEl = document.createElement('div');
+    statusEl.style.cssText = 'font-size:12px;color:var(--muted);margin:0 0 10px;';
+    statusEl.textContent = 'Загрузка данных из API...';
+    document.querySelector('h1').after(statusEl);
+
+    rollBtn.disabled = true;
+    rollHeroBtn.disabled = true;
+
+    try {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 8000);
+
+      const [heroesRes, itemsRes, genericRes, iconsRes] = await Promise.all([
+        fetch('https://assets.deadlock-api.com/v2/heroes?language=english&only_active=true', { signal: controller.signal }),
+        fetch('https://assets.deadlock-api.com/v2/items?language=english', { signal: controller.signal }),
+        fetch('https://assets.deadlock-api.com/v2/generic-data', { signal: controller.signal }),
+        fetch('https://assets.deadlock-api.com/v1/icons', { signal: controller.signal })
+      ]);
+      clearTimeout(tid);
+
+      if (heroesRes.ok) {
+        const heroes = await heroesRes.json();
+        for (const h of heroes) {
+          const name = h.name;
+          if (!name || name.includes('_')) continue; // skip internal class names
+          const imgUrl = h.images?.icon_hero_card || h.images?.icon_image_small;
+          const existing = HEROES.find(x => x.name === name);
+          if (existing) {
+            if (imgUrl) existing.imageUrl = imgUrl;
+          } else if (imgUrl) {
+            HEROES.push({ name, imageUrl: imgUrl });
+          }
+        }
+      }
+
+      if (itemsRes.ok) {
+        const items = await itemsRes.json();
+        for (const item of items) {
+          const type = item.type;
+          if (!['weapon', 'spirit', 'vitality'].includes(type)) continue;
+          const name = item.name;
+          if (!name || name.includes('_')) continue; // skip internal class names
+          const tier = item.item_tier ?? item.tier ?? item.shop_tier;
+          const imgUrl = item.image_webp || item.image;
+          if (imgUrl) API_ITEM_IMAGE.set(name, imgUrl);
+          if (tier >= 1 && tier <= 4 && !ALL_ITEMS.includes(name)) {
+            TIERS[tier].push(name);
+            ALL_ITEMS.push(name);
+            ITEM_TIER.set(name, tier);
+            ITEM_TYPE.set(name, type);
+          }
+        }
+      }
+
+      if (genericRes.ok) {
+        const generic = await genericRes.json();
+        const prices = generic.item_price_per_tier;
+        if (Array.isArray(prices)) {
+          for (let tier = 1; tier <= 4; tier++) {
+            if (prices[tier] != null) TIER_COST[tier] = prices[tier];
+          }
+        }
+      }
+
+      if (iconsRes.ok) {
+        const icons = await iconsRes.json();
+        if (icons.icon_soul) SOULS_ICON_URL = icons.icon_soul;
+      }
+
+      statusEl.remove();
+    } catch (e) {
+      console.warn('Deadlock API load failed:', e);
+      statusEl.textContent = 'API недоступен, используются локальные данные.';
+      setTimeout(() => statusEl.remove(), 3000);
+    } finally {
+      rollBtn.disabled = false;
+      rollHeroBtn.disabled = false;
+    }
+  }
+
+  // =========================================================
   // ЧИСЛО ИНПУТ КОНТРОЛЛЕРЫ (+/- КНОПКИ)
   // =========================================================
   document.addEventListener('click', (e) => {
@@ -1198,7 +1419,8 @@ window.addEventListener('DOMContentLoaded', () => {
     input.value = value;
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
-  
+
+  initFromAPI();
 });
 
 </script>
