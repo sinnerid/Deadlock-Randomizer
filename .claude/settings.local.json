@@ -5,7 +5,22 @@
       "Bash(node -e ':*)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:assets.deadlock-api.com)",
-      "WebFetch(domain:assets-bucket.deadlock-api.com)"
+      "WebFetch(domain:assets-bucket.deadlock-api.com)",
+      "WebFetch(domain:deadlock.wiki)",
+      "Bash(curl -s \"https://assets.deadlock-api.com/v2/heroes?language=english&only_active=true\")",
+      "Bash(python3 -c \"import json,sys; heroes=json.load\\(sys.stdin\\); abrams=next\\(h for h in heroes if 'Abrams' in h.get\\('name',''\\)\\); print\\(json.dumps\\({k:v for k,v in abrams.items\\(\\) if 'abilit' in k.lower\\(\\) or k in ['name','id']}, indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; heroes=json.load\\(sys.stdin\\); abrams=next\\(h for h in heroes if 'Abrams' in h.get\\('name',''\\)\\); print\\(list\\(abrams.keys\\(\\)\\)\\)\")",
+      "Bash(curl -s \"https://assets.deadlock-api.com/v2/heroes/6?language=english\")",
+      "Bash(python3 -c \"import json,sys; h=json.load\\(sys.stdin\\); print\\(list\\(h.keys\\(\\)\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; h=json.load\\(sys.stdin\\); print\\(json.dumps\\(h.get\\('images', {}\\), indent=2\\)\\)\")",
+      "Bash(curl -s \"https://assets.deadlock-api.com/v2/abilities?language=english&hero_id=6\")",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\(type\\(data\\), len\\(data\\) if isinstance\\(data, list\\) else 'not list'\\); a=data[0] if isinstance\\(data,list\\) else data; print\\(list\\(a.keys\\(\\)\\) if isinstance\\(a,dict\\) else a\\)\")",
+      "Bash(curl -s \"https://assets.deadlock-api.com/v2/abilities?language=english\")",
+      "Bash(curl -s \"https://assets.deadlock-api.com/v2/heroes/6/abilities?language=english\")",
+      "Bash(python3 -c 'import json,sys; data=json.load\\(sys.stdin\\); print\\(type\\(data\\)\\); *)",
+      "Bash(curl -s \"https://assets.deadlock-api.com/docs\")",
+      "Bash(curl -s \"https://assets.deadlock-api.com/openapi.json\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([p for p in d['paths'].keys\\(\\) if 'abilit' in p.lower\\(\\) or 'hero' in p.lower\\(\\)]\\)\")"
     ]
   }
 }
