@@ -40,9 +40,53 @@
     --muted: #b09870;
     --border: #5a4828;
   }
-  @keyframes page-fadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  body { background: var(--bg); color: var(--text); margin: 0; padding: 32px 40px; font-family: 'Radiance', Inter, system-ui, sans-serif; background-size: cover; background-position: center; background-attachment: fixed; animation: page-fadein 0.6s ease both; }
-  h1 { margin: 0 0 24px; letter-spacing: 3px; font-family: 'Forevs Demo', sans-serif; font-weight: 700; text-align: center; text-transform: uppercase; font-size: 2.2rem; }
+  @keyframes page-fadein { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes bounce-y { 0%,100% { transform: translateY(0); } 50% { transform: translateY(7px); } }
+  html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Radiance', Inter, system-ui, sans-serif; background-size: cover; background-position: center; background-attachment: fixed; animation: page-fadein 0.5s ease both; }
+
+  /* Fixed header */
+  .site-header { position: fixed; top: 0; left: 0; right: 0; z-index: 300; text-align: center; padding: 14px 48px 12px; background: rgba(10,7,2,0.88); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .site-header h1 { margin: 0; letter-spacing: 4px; font-family: 'Forevs Demo', sans-serif; font-weight: 700; text-transform: uppercase; font-size: 1.9rem; }
+
+  /* Scroll pages — horizontal */
+  .scroll-container { display: flex; flex-direction: row; width: 100vw; height: calc(100vh - 68px); overflow-x: scroll; overflow-y: hidden; scroll-snap-type: x mandatory; scroll-behavior: smooth; margin-top: 68px; }
+  .page { flex: 0 0 100vw; width: 100vw; height: 100%; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px 48px 90px; box-sizing: border-box; overflow-y: auto; }
+  .page-summary { justify-content: flex-start; padding-top: 36px; }
+  .page-subtitle { text-align: center; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin: 0 0 18px; font-family: 'Radiance', sans-serif; }
+
+  /* Fixed side nav buttons */
+  /* Bottom nav bar */
+  .bottom-nav { position: fixed; bottom: 36px; left: 50%; transform: translateX(-50%); z-index: 500; display: flex; align-items: center; gap: 16px; background: rgba(18,13,4,0.88); border: 1px solid var(--border); border-radius: 40px; padding: 10px 20px; backdrop-filter: blur(10px); }
+  .back-btn, .next-btn { background: transparent; border: none; font-family: 'Radiance', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: color 0.2s, opacity 0.2s; padding: 4px 8px; border-radius: 4px; }
+  .back-btn { color: var(--muted); }
+  .back-btn:hover { color: var(--text); }
+  .next-btn { color: var(--accent); }
+  .next-btn:hover { color: #f5c96a; }
+  .nav-btn-hidden { opacity: 0; pointer-events: none; }
+  .page-dots { display: flex; flex-direction: row; gap: 8px; align-items: center; }
+  .page-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.2); border: 1px solid var(--border); cursor: pointer; transition: background 0.3s, transform 0.3s; padding: 0; }
+  .page-dot.active { background: var(--accent); transform: scale(1.3); border-color: var(--accent); }
+
+  /* Hero selection grid */
+  #heroSelectGrid { display: grid; grid-template-columns: repeat(auto-fill, 95px); gap: 10px; overflow-y: auto; max-height: calc(100vh - 220px); padding: 6px 2px 2px; }
+  .hero-select-card { position: relative; border-radius: 6px; overflow: hidden; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
+  .hero-select-card:hover { transform: translateY(-2px); box-shadow: 0 0 10px 2px rgba(200,146,42,0.3); }
+  .hero-select-card.selected { box-shadow: 0 0 0 2px var(--accent), 0 0 20px 4px rgba(200,146,42,0.4); transform: translateY(-2px); }
+  .hero-select-card img { width: 95px; height: 134px; object-fit: cover; object-position: top center; display: block; }
+  .hero-select-card .hero-name { position: absolute; bottom: 0; left: 0; right: 0; font-family: 'Radiance', sans-serif; font-weight: 700; font-size: 9px; letter-spacing: .4px; text-transform: uppercase; text-align: center; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,0.8) 50%); padding: 10px 2px 4px; }
+  .hero-select-card.selected .hero-name { color: var(--accent); }
+
+  /* Summary */
+  .summary-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-family: 'Radiance', sans-serif; font-weight: 700; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); width: 100%; text-align: center; }
+  #summaryHeroes { grid-template-columns: repeat(auto-fill, 95px); column-gap: 10px; row-gap: 10px; }
+  #summarySkills { grid-template-columns: repeat(6, max-content); column-gap: 8px; row-gap: 8px; }
+  #summaryItems  { grid-template-columns: repeat(4, max-content); column-gap: 12px; row-gap: 14px; }
+
+  #summaryTotalCost { margin-top: 10px; }
+  #summaryTotalCost .total-cost { justify-content: center; font-size: 22px; padding: 10px 20px; }
+  #summaryTotalCost .total-cost > span:first-child { display: none; }
+  #summaryTotalCost .total-cost .souls-icon { height: 1.4em; width: auto; vertical-align: middle; }
   h2 { margin: 18px 0 10px; letter-spacing: .2px; font-size: 16px; color: var(--text); }
 
   .controls {
@@ -269,24 +313,18 @@
   }
   .total-cost .souls-icon { height: 16px; width: auto; vertical-align: middle; margin-left: 2px; }
 
-  /* Main 3-column layout */
-  .main-layout {
-    display: flex;
-    gap: 32px;
-    align-items: flex-start;
-    justify-content: center;
-  }
+  /* Panel content box */
   .panel {
-    background: rgba(18, 13, 4, 0.72);
+    background: rgba(18, 13, 4, 0.75);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px;
+    border-radius: 14px;
+    padding: 24px 28px;
     flex-shrink: 0;
   }
   .panel-title {
-    margin: 0 0 14px;
-    font-size: 13px;
-    letter-spacing: 2px;
+    margin: 0 0 16px;
+    font-size: 12px;
+    letter-spacing: 2.5px;
     text-transform: uppercase;
     color: var(--accent);
     font-family: 'Radiance', sans-serif;
@@ -306,11 +344,13 @@
     grid-template-columns: unset;
   }
   /* Skills panel header */
-  .skill-header {
+  .panel-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 14px;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
   }
   #heroSelect {
     background: rgba(42,32,16,0.9);
@@ -329,6 +369,7 @@
   #skillResult {
     grid-template-columns: repeat(6, max-content);
     column-gap: 8px; row-gap: 8px; margin-top: 0;
+    width: max-content; margin-left: auto; margin-right: auto;
   }
   .skill-flip {
     width: 95px; height: 134px;
@@ -368,43 +409,47 @@
 </style>
 </head>
 <body>
+
+<!-- Fixed title — always visible -->
+<header class="site-header">
   <h1>Deadlock build randomizer</h1>
+</header>
 
-  <div class="main-layout">
+<div class="scroll-container" id="scrollContainer">
 
-    <!-- Block 1: Heroes -->
-    <div class="panel panel-heroes">
-      <div class="panel-title">Hero roll</div>
-      <div class="controls" id="heroControls" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
-        <label style="display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);">Heroes (min 3):
-          <div class="number-input-wrapper">
-            <button class="dec-btn" data-target="heroCount">−</button>
-            <input id="heroCount" type="number" min="3" max="9" value="3">
-            <button class="inc-btn" data-target="heroCount">+</button>
-          </div>
-        </label>
-        <div style="display:flex;gap:8px;">
-          <button id="rollHeroBtn">Roll heroes</button>
-          <button id="revealAllHeroBtn" disabled>Reveal all</button>
-        </div>
+  <!-- PAGE 1: Hero selection -->
+  <section class="page" id="page-heroes">
+    <p class="page-subtitle">Step 1 — select your hero</p>
+    <div class="panel" style="width:100%;max-width:1100px;box-sizing:border-box;padding-top:20px;">
+      <div class="panel-header">
+        <div class="panel-title" style="margin:0;">Hero</div>
       </div>
-      <div id="heroResult" class="grid"></div>
+      <div id="heroSelectGrid"></div>
     </div>
+  </section>
 
-    <!-- Block 2: Ability upgrade -->
-    <div class="panel panel-skills">
-      <div class="skill-header">
+  <!-- PAGE 2: Ability upgrade -->
+  <section class="page" id="page-skills">
+    <p class="page-subtitle">Step 2 — ability upgrade order</p>
+    <div class="panel" style="width:100%;max-width:1100px;box-sizing:border-box;">
+      <div class="panel-header">
         <div class="panel-title" style="margin:0;">Ability upgrade</div>
-        <select id="heroSelect"><option value="">— Hero —</option></select>
-        <button id="rollSkillBtn">Roll skills</button>
+        <button id="rollSkillBtn" style="flex-shrink:0;">Roll skills</button>
       </div>
       <div id="skillResult" class="grid"></div>
     </div>
+    <!-- hidden select kept for JS compatibility -->
+    <select id="heroSelect" style="display:none"><option value="">— Hero —</option></select>
+  </section>
 
-    <!-- Block 3: Items -->
-    <div class="panel" style="display:flex;flex-direction:column;gap:14px;">
-      <div class="panel-title" style="margin:0;">Build</div>
-      <div style="display:flex;gap:20px;align-items:flex-start;">
+  <!-- PAGE 3: Items build -->
+  <section class="page" id="page-items">
+    <p class="page-subtitle">Step 3 — build your items</p>
+    <div class="panel" style="width:100%;max-width:1100px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px;">
+      <div class="panel-header">
+        <div class="panel-title" style="margin:0;">Build</div>
+      </div>
+      <div style="display:flex;gap:24px;align-items:flex-start;">
         <div class="build-sidebar">
           <div class="controls" id="buildControls">
             <label>Total items:
@@ -450,8 +495,40 @@
         <div id="result" class="grid"></div>
       </div>
     </div>
+  </section>
 
-  </div>
+  <!-- PAGE 4: Summary -->
+  <section class="page page-summary" id="page-summary">
+    <p class="page-subtitle">Your full build</p>
+    <div class="panel" style="width:100%;max-width:1100px;box-sizing:border-box;display:flex;flex-direction:column;gap:22px;align-items:center;">
+      <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div class="summary-label">Hero</div>
+        <div id="summaryHeroes" class="grid" style="justify-content:center;"></div>
+      </div>
+      <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div class="summary-label">Ability upgrade</div>
+        <div id="summarySkills" class="grid" style="justify-content:center;"></div>
+      </div>
+      <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div class="summary-label">Items</div>
+        <div id="summaryItems" class="grid" style="justify-content:center;"></div>
+        <div id="summaryTotalCost"></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="bottom-nav">
+  <button class="back-btn nav-btn-hidden" id="globalBack">← Back</button>
+  <nav class="page-dots" id="pageDots">
+    <button class="page-dot active" data-page="page-heroes"></button>
+    <button class="page-dot" data-page="page-skills"></button>
+    <button class="page-dot" data-page="page-items"></button>
+    <button class="page-dot" data-page="page-summary"></button>
+  </nav>
+  <button class="next-btn" id="globalNext">Next →</button>
+</div>
 
 
 <script>
@@ -1032,6 +1109,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (flippedCount >= total && total > 0) {
       revealAllBtn.disabled = true;
       showTotalCost();
+      updateSummary('items');
     }
   }
 
@@ -1069,6 +1147,8 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     revealAllBtn.disabled = false;
+    showTotalCost();
+    updateSummary('items');
   });
 
   revealAllBtn.addEventListener('click', () => {
@@ -1134,78 +1214,51 @@ window.addEventListener('DOMContentLoaded', () => {
     { name: 'Silver',        file: 'Silver_card.png' },
   ];
 
-  const heroResultEl      = document.getElementById('heroResult');
-  const rollHeroBtn       = document.getElementById('rollHeroBtn');
-  const revealAllHeroBtn  = document.getElementById('revealAllHeroBtn');
-  const heroCountEl       = document.getElementById('heroCount');
+  // =========================================================
+  // HERO SELECTION
+  // =========================================================
+  let selectedHeroId = null;
+  const heroSelectGrid = document.getElementById('heroSelectGrid');
 
-  function makeHeroCard(hero, index) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'flip-wrapper hero-flip';
+  function buildHeroSelectGrid() {
+    heroSelectGrid.innerHTML = '';
+    HEROES.forEach(hero => {
+      const card = document.createElement('div');
+      card.className = 'hero-select-card';
+      card.dataset.heroName = hero.name;
 
-    const flipper = document.createElement('div');
-    flipper.className = 'flipper';
+      const img = document.createElement('img');
+      img.src = hero.imageUrl || (HERO_DIR + hero.file);
+      img.alt = hero.name;
 
-    // Face-down (рубашка)
-    const front = document.createElement('div');
-    front.className = 'card-front';
-    const logo = document.createElement('img');
-    logo.className = 'card-front-logo';
-    logo.src = 'items/cards/Deadlock_logo.png';
-    front.appendChild(logo);
+      const nameEl = document.createElement('div');
+      nameEl.className = 'hero-name';
+      nameEl.textContent = hero.name;
 
-    // Face-up (герой)
-    const back = document.createElement('div');
-    back.className = 'card-back hero-card-back';
+      card.appendChild(img);
+      card.appendChild(nameEl);
 
-    const art = document.createElement('img');
-    art.className = 'hero-art';
-    art.src = hero.imageUrl || (HERO_DIR + hero.file);
+      card.addEventListener('click', async () => {
+        heroSelectGrid.querySelectorAll('.hero-select-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
 
-    const nameEl = document.createElement('div');
-    nameEl.className = 'hero-name';
-    nameEl.textContent = hero.name;
+        // find hero id from HERO_LIST
+        const found = HERO_LIST.find(h => h.name === hero.name);
+        selectedHeroId = found ? found.id : null;
 
-    back.appendChild(art);
-    back.appendChild(nameEl);
-    flipper.appendChild(front);
-    flipper.appendChild(back);
-    wrapper.appendChild(flipper);
+        // sync abilities select + load abilities
+        const heroSelectEl = document.getElementById('heroSelect');
+        if (selectedHeroId) {
+          heroSelectEl.value = selectedHeroId;
+          await loadHeroAbilities(selectedHeroId);
+        }
 
-    wrapper.addEventListener('click', () => {
-      if (!flipper.classList.contains('flipped')) {
-        flipper.classList.add('flipped');
-        checkAllHeroFlipped();
-      }
+        updateSummary('heroes');
+      });
+
+      heroSelectGrid.appendChild(card);
     });
-
-    const dealDelay = index * 60;
-    wrapper.style.animationDelay = `${dealDelay}ms`;
-    wrapper.classList.add('dealing');
-
-    return wrapper;
   }
-
-  function checkAllHeroFlipped() {
-    const all = heroResultEl.querySelectorAll('.flipper');
-    if ([...all].every(f => f.classList.contains('flipped'))) {
-      revealAllHeroBtn.disabled = true;
-    }
-  }
-
-  rollHeroBtn.addEventListener('click', () => {
-    if (!HEROES.length) return;
-    heroResultEl.innerHTML = '';
-    revealAllHeroBtn.disabled = false;
-    const n = Math.min(9, Math.max(3, parseInt(heroCountEl?.value, 10) || 3));
-    const pool = shuffle([...HEROES]).slice(0, n);
-    pool.forEach((h, i) => heroResultEl.appendChild(makeHeroCard(h, i)));
-  });
-
-  revealAllHeroBtn.addEventListener('click', () => {
-    heroResultEl.querySelectorAll('.flipper').forEach(f => f.classList.add('flipped'));
-    revealAllHeroBtn.disabled = true;
-  });
 
   // =========================================================
   // API INTEGRATION
@@ -1214,10 +1267,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const statusEl = document.createElement('div');
     statusEl.style.cssText = 'font-size:12px;color:var(--muted);margin:0 0 10px;';
     statusEl.textContent = 'Загрузка данных из API...';
-    document.querySelector('h1').after(statusEl);
+    document.querySelector('.site-header').appendChild(statusEl);
 
     rollBtn.disabled = true;
-    rollHeroBtn.disabled = true;
 
     try {
       const controller = new AbortController();
@@ -1297,7 +1349,7 @@ window.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => statusEl.remove(), 3000);
     } finally {
       rollBtn.disabled = false;
-      rollHeroBtn.disabled = false;
+      buildHeroSelectGrid();
     }
   }
 
@@ -1452,17 +1504,88 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   const skillResultEl = document.getElementById('skillResult');
-  const heroSelectEl  = document.getElementById('heroSelect');
-
-  heroSelectEl.addEventListener('change', async () => {
-    await loadHeroAbilities(heroSelectEl.value);
-  });
 
   document.getElementById('rollSkillBtn').addEventListener('click', () => {
     skillResultEl.innerHTML = '';
     const cards = generateSkillSequence();
     cards.forEach((data, i) => skillResultEl.appendChild(makeSkillCard(data, i)));
+    updateSummary('skills');
   });
+
+  // =========================================================
+  // PAGE NAVIGATION
+  // =========================================================
+  const scrollContainer = document.getElementById('scrollContainer');
+  const pages = ['page-heroes', 'page-skills', 'page-items', 'page-summary'];
+  const globalBack = document.getElementById('globalBack');
+  const globalNext = document.getElementById('globalNext');
+  const dots = document.querySelectorAll('.page-dot');
+  let currentPageIdx = 0;
+
+  function goToPage(idx) {
+    idx = Math.max(0, Math.min(pages.length - 1, idx));
+    document.getElementById(pages[idx])?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function updateNav(idx) {
+    currentPageIdx = idx;
+    globalBack.classList.toggle('nav-btn-hidden', idx === 0);
+    globalNext.classList.toggle('nav-btn-hidden', idx === pages.length - 1);
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+  }
+
+  globalNext.addEventListener('click', () => goToPage(currentPageIdx + 1));
+  globalBack.addEventListener('click', () => goToPage(currentPageIdx - 1));
+
+  dots.forEach((dot, i) => dot.addEventListener('click', () => goToPage(i)));
+
+  // Track active page on scroll
+  const pageEls = pages.map(id => document.getElementById(id));
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) updateNav(pages.indexOf(e.target.id));
+    });
+  }, { root: scrollContainer, threshold: 0.5 });
+  pageEls.forEach(el => el && observer.observe(el));
+
+  // =========================================================
+  // SUMMARY UPDATE
+  // =========================================================
+  function cloneGridRevealed(sourceId, targetId) {
+    const src = document.getElementById(sourceId);
+    const tgt = document.getElementById(targetId);
+    if (!src || !tgt) return;
+    tgt.innerHTML = '';
+    // clone each child directly so grid CSS applies correctly
+    [...src.children].forEach(child => {
+      const clone = child.cloneNode(true);
+      clone.querySelectorAll('.flipper').forEach(f => f.classList.add('flipped'));
+      clone.style.cursor = 'default';
+      clone.style.animation = 'none';
+      tgt.appendChild(clone);
+    });
+  }
+
+  function updateSummary(section) {
+    if (section === 'heroes') {
+      // for hero selection: clone the selected card into summary
+      const tgt = document.getElementById('summaryHeroes');
+      tgt.innerHTML = '';
+      const sel = heroSelectGrid.querySelector('.hero-select-card.selected');
+      if (sel) tgt.appendChild(sel.cloneNode(true));
+    }
+    if (section === 'skills') cloneGridRevealed('skillResult', 'summarySkills');
+    if (section === 'items') {
+      cloneGridRevealed('result', 'summaryItems');
+      const src = document.getElementById('totalCost');
+      const tgt = document.getElementById('summaryTotalCost');
+      if (src && tgt) {
+        const hasItems = document.getElementById('result')?.children.length > 0;
+        tgt.innerHTML = '';
+        if (hasItems) tgt.appendChild(src.cloneNode(true));
+      }
+    }
+  }
 });
 
 </script>
