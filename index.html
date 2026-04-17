@@ -2,9 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
-<title>Deadlock build randomizer</title>
+<title>Deadlock© randomizer</title>
 <style>
   @font-face {
     font-family: 'Forevs Demo';
@@ -78,15 +79,19 @@
   .hero-select-card.selected .hero-name { color: var(--accent); }
 
   /* Summary */
-  .summary-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-family: 'Radiance', sans-serif; font-weight: 700; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); width: 100%; text-align: center; }
-  #summaryHeroes { grid-template-columns: repeat(auto-fill, 95px); column-gap: 10px; row-gap: 10px; }
+  .summary-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-family: 'Radiance', sans-serif; font-weight: 700; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); width: 100%; text-align: left; }
+  .summary-panel { display: grid; grid-template-columns: 240px 1fr; grid-template-rows: auto auto; column-gap: 40px; row-gap: 28px; align-items: start; width: 100%; max-width: 1300px; box-sizing: border-box; }
+  .summary-hero-section { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; }
+  .summary-skills-section { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; }
+  .summary-items-section { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; }
+  #summaryTotalCost { grid-column: 1; grid-row: 2; }
+  #summaryHeroes { grid-template-columns: 240px; }
+  #summaryHeroes .hero-select-card img { width: 240px; height: 338px; }
   #summarySkills { grid-template-columns: repeat(6, max-content); column-gap: 8px; row-gap: 8px; }
-  #summaryItems  { grid-template-columns: repeat(4, max-content); column-gap: 12px; row-gap: 14px; }
+  #summaryItems  { grid-template-columns: repeat(6, max-content); column-gap: 10px; row-gap: 12px; }
 
-  #summaryTotalCost { margin-top: 10px; }
-  #summaryTotalCost .total-cost { justify-content: center; font-size: 22px; padding: 10px 20px; }
-  #summaryTotalCost .total-cost > span:first-child { display: none; }
-  #summaryTotalCost .total-cost .souls-icon { height: 1.4em; width: auto; vertical-align: middle; }
+  #summaryTotalCost { font-size: 11px; letter-spacing: 2px; font-family: 'Radiance', sans-serif; font-weight: 700; color: var(--accent); padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 14px; display: flex; align-items: center; gap: 4px; }
+  #summaryTotalCost .souls-icon { height: 1em; width: auto; vertical-align: middle; }
   h2 { margin: 18px 0 10px; letter-spacing: .2px; font-size: 16px; color: var(--text); }
 
   .controls {
@@ -412,7 +417,7 @@
 
 <!-- Fixed title — always visible -->
 <header class="site-header">
-  <h1>Deadlock build randomizer</h1>
+  <h1>Deadlock<sup style="font-size:0.45em;vertical-align:super;">©</sup> build randomizer</h1>
 </header>
 
 <div class="scroll-container" id="scrollContainer">
@@ -500,19 +505,19 @@
   <!-- PAGE 4: Summary -->
   <section class="page page-summary" id="page-summary">
     <p class="page-subtitle">Your full build</p>
-    <div class="panel" style="width:100%;max-width:1100px;box-sizing:border-box;display:flex;flex-direction:column;gap:22px;align-items:center;">
-      <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;">
+    <div class="panel summary-panel">
+      <div class="summary-hero-section">
         <div class="summary-label">Hero</div>
-        <div id="summaryHeroes" class="grid" style="justify-content:center;"></div>
+        <div id="summaryHeroes" class="grid"></div>
       </div>
-      <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div class="summary-skills-section">
         <div class="summary-label">Ability upgrade</div>
-        <div id="summarySkills" class="grid" style="justify-content:center;"></div>
+        <div id="summarySkills" class="grid"></div>
       </div>
-      <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div id="summaryTotalCost"></div>
+      <div class="summary-items-section">
         <div class="summary-label">Items</div>
-        <div id="summaryItems" class="grid" style="justify-content:center;"></div>
-        <div id="summaryTotalCost"></div>
+        <div id="summaryItems" class="grid"></div>
       </div>
     </div>
   </section>
@@ -1581,8 +1586,8 @@ window.addEventListener('DOMContentLoaded', () => {
       const tgt = document.getElementById('summaryTotalCost');
       if (src && tgt) {
         const hasItems = document.getElementById('result')?.children.length > 0;
-        tgt.innerHTML = '';
-        if (hasItems) tgt.appendChild(src.cloneNode(true));
+        const strong = src.querySelector('strong');
+        tgt.innerHTML = hasItems && strong ? strong.innerHTML : '';
       }
     }
   }
