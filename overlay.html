@@ -258,21 +258,6 @@ window.addEventListener('storage', e => {
   if (e.key === 'deadlock_overlay') load();
 });
 
-// Relay polling — works with OBS Browser Source
-// Uses same origin as overlay (works both locally and on Railway)
-const RELAY_BASE = location.origin;
-const token = new URLSearchParams(location.search).get('token');
-async function pollRelay() {
-  if (!token) return;
-  try {
-    const res = await fetch(`${RELAY_BASE}/data/${token}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data) render(data);
-    }
-  } catch {}
-}
-setInterval(pollRelay, 1000);
 </script>
 </body>
 </html>

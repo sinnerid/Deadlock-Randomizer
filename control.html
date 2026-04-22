@@ -129,10 +129,10 @@
 <div class="title">🎮 Overlay Control</div>
 
 <div class="section">
-  <div class="label">Server</div>
+  <div class="label">Status</div>
   <div class="status-row">
     <div class="status-dot" id="statusDot"></div>
-    <div class="status-text" id="statusText">Checking...</div>
+    <div class="status-text" id="statusText">Waiting...</div>
   </div>
 </div>
 
@@ -147,52 +147,34 @@
 
 <div class="divider"></div>
 
-<button id="copyBtn">Copy overlay link</button>
+<button id="copyBtn">Open overlay window</button>
 <button id="resetBtn" class="danger">Reset build</button>
 
 <script>
-const BASE = location.origin;
-
-// Token — ask main site via localStorage (same origin if opened from site)
-// or use URL param ?token=...
-const token = new URLSearchParams(location.search).get('token')
-  || localStorage.getItem('overlay_token')
-  || '';
-
 let lastUpdated = null;
 
-// ── Status check ──
-async function checkStatus() {
-  const dot = document.getElementById('statusDot');
-  const txt = document.getElementById('statusText');
-  try {
-    const res = await fetch(`${BASE}/data/${token || 'ping'}`);
-    if (res.ok) {
-      dot.className = 'status-dot online';
-      txt.textContent = 'Online';
-    } else throw new Error();
-  } catch {
-    dot.className = 'status-dot offline';
-    txt.textContent = 'Offline — run server.js';
-  }
-}
+// BroadcastChannel — real-time updates from main app
+const channel = new BroadcastChannel('deadlock_overlay');
+channel.onmessage = e => { renderBuild(e.data); updateStatus(true); };
 
-// ── Build preview ──
-async function loadBuild() {
-  if (!token) return;
+// localStorage — load on open + watch for changes
+function loadBuild() {
   try {
-    const res = await fetch(`${BASE}/data/${token}`);
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data || data.updatedAt === lastUpdated) return;
-    lastUpdated = data.updatedAt;
-    renderBuild(data);
+    const raw = localStorage.getItem('deadlock_overlay');
+    if (raw) renderBuild(JSON.parse(raw));
   } catch {}
 }
 
+window.addEventListener('storage', e => {
+  if (e.key === 'deadlock_overlay') loadBuild();
+});
+
 function renderBuild(data) {
+  if (!data || data.updatedAt === lastUpdated) return;
+  lastUpdated = data.updatedAt;
+  updateStatus(true);
   const el = document.getElementById('buildInfo');
-  if (!data || (!data.hero && !data.items?.length)) {
+  if (!data.hero && !data.items?.length) {
     el.innerHTML = '<div class="no-build">No build yet</div>';
     return;
   }
@@ -207,36 +189,31 @@ function renderBuild(data) {
 }
 
 function row(label, value) {
-  return `<div class="build-row">
-    <div class="build-row-label">${label}</div>
-    <div class="build-row-value">${value}</div>
-  </div>`;
+  return `<div class="build-row"><div class="build-row-label">${label}</div><div class="build-row-value">${value}</div></div>`;
 }
 
-// ── Copy overlay link ──
+function updateStatus(online) {
+  document.getElementById('statusDot').className = `status-dot ${online ? 'online' : 'offline'}`;
+  document.getElementById('statusText').textContent = online ? 'Connected' : 'Open from main site';
+}
+
+// Copy overlay link — opens overlay as popup
 document.getElementById('copyBtn').addEventListener('click', function() {
-  if (!token) { this.textContent = 'No token found'; return; }
-  const url = `${BASE}/overlay.html?token=${token}`;
-  navigator.clipboard.writeText(url).then(() => {
-    this.textContent = 'Copied!';
-    this.className = 'success';
-    setTimeout(() => { this.textContent = 'Copy overlay link'; this.className = ''; }, 1500);
-  });
+  window.open('../overlay.html', 'deadlock_overlay', 'width=440,height=400');
 });
 
-// ── Reset build ──
-document.getElementById('resetBtn').addEventListener('click', async function() {
-  if (!token) return;
-  await fetch(`${BASE}/reset/${token}`, { method: 'POST' }).catch(() => {});
-  renderBuild(null);
+// Reset build
+document.getElementById('resetBtn').addEventListener('click', function() {
+  localStorage.removeItem('deadlock_overlay');
+  channel.postMessage(null);
+  document.getElementById('buildInfo').innerHTML = '<div class="no-build">No build yet</div>';
+  lastUpdated = null;
   this.textContent = 'Done!';
   setTimeout(() => this.textContent = 'Reset build', 1200);
 });
 
-// ── Poll ──
-checkStatus();
 loadBuild();
-setInterval(() => { checkStatus(); loadBuild(); }, 2000);
+updateStatus(!!localStorage.getItem('deadlock_overlay'));
 </script>
 </body>
 </html>
