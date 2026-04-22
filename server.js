@@ -44,6 +44,13 @@ http.createServer((req, res) => {
     return;
   }
 
+  // POST /shutdown
+  if (req.method === 'POST' && req.url === '/shutdown') {
+    res.writeHead(200); res.end('bye');
+    setTimeout(() => process.exit(0), 100);
+    return;
+  }
+
   // GET /data/:token
   const getMatch = req.method === 'GET' && req.url.match(/^\/data\/([a-zA-Z0-9_-]+)$/);
   if (getMatch) {

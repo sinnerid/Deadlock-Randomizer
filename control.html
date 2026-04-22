@@ -2,218 +2,90 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Deadlock Overlay Control</title>
+<title>Deadlock Overlay</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
     background: #1a1a2e;
     color: #e0e0e0;
     font-family: 'Segoe UI', sans-serif;
     font-size: 13px;
-    padding: 12px;
-    min-width: 220px;
+    padding: 14px;
   }
-
   .title {
     font-size: 11px;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: #c8922a;
     font-weight: 700;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     padding-bottom: 8px;
     border-bottom: 1px solid rgba(200,146,42,0.3);
   }
-
-  .section { margin-bottom: 12px; }
-
-  .label {
-    font-size: 10px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.4);
-    margin-bottom: 5px;
-  }
-
-  /* Status */
   .status-row {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-bottom: 14px;
   }
-
-  .status-dot {
-    width: 8px;
-    height: 8px;
+  .dot {
+    width: 9px; height: 9px;
     border-radius: 50%;
-    background: #444;
+    background: #555;
     flex-shrink: 0;
-    transition: background 0.3s;
+    transition: background 0.3s, box-shadow 0.3s;
   }
-  .status-dot.online { background: #4caf50; box-shadow: 0 0 6px #4caf5088; }
-  .status-dot.offline { background: #f44336; box-shadow: 0 0 6px #f4433688; }
-
-  .status-text { font-size: 12px; color: rgba(255,255,255,0.7); }
-
-  /* Buttons */
+  .dot.online  { background: #4caf50; box-shadow: 0 0 6px #4caf5099; }
+  .dot.offline { background: #f44336; box-shadow: 0 0 6px #f4433699; }
+  .status-text { color: rgba(255,255,255,0.6); font-size: 12px; }
   button {
     width: 100%;
-    padding: 7px 12px;
-    border: 1px solid rgba(200,146,42,0.3);
-    border-radius: 5px;
-    background: rgba(200,146,42,0.08);
-    color: #c8922a;
+    padding: 8px 12px;
+    border: 1px solid rgba(244,67,54,0.35);
+    border-radius: 6px;
+    background: rgba(244,67,54,0.07);
+    color: #f44336;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
-    margin-bottom: 6px;
+    transition: background 0.2s;
   }
-  button:hover { background: rgba(200,146,42,0.18); border-color: rgba(200,146,42,0.6); }
-  button:active { background: rgba(200,146,42,0.28); }
-  button.success { color: #4caf50; border-color: rgba(76,175,80,0.4); background: rgba(76,175,80,0.08); }
-  button.danger { color: #f44336; border-color: rgba(244,67,54,0.3); background: rgba(244,67,54,0.06); }
-  button.danger:hover { background: rgba(244,67,54,0.15); }
-
-  /* Build preview */
-  .build-info {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 6px;
-    padding: 8px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .build-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .build-row-label {
-    font-size: 10px;
-    color: rgba(255,255,255,0.35);
-    width: 50px;
-    flex-shrink: 0;
-  }
-
-  .build-row-value {
-    font-size: 11px;
-    color: rgba(255,255,255,0.75);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .no-build {
-    font-size: 11px;
-    color: rgba(255,255,255,0.25);
-    text-align: center;
-    padding: 6px 0;
-  }
-
-  .divider {
-    height: 1px;
-    background: rgba(255,255,255,0.07);
-    margin: 10px 0;
-  }
+  button:hover { background: rgba(244,67,54,0.18); }
 </style>
 </head>
 <body>
-
-<div class="title">🎮 Overlay Control</div>
-
-<div class="section">
-  <div class="label">Status</div>
-  <div class="status-row">
-    <div class="status-dot" id="statusDot"></div>
-    <div class="status-text" id="statusText">Waiting...</div>
-  </div>
+<div class="title">Deadlock Overlay</div>
+<div class="status-row">
+  <div class="dot" id="dot"></div>
+  <div class="status-text" id="status">Checking...</div>
 </div>
-
-<div class="divider"></div>
-
-<div class="section">
-  <div class="label">Current build</div>
-  <div class="build-info" id="buildInfo">
-    <div class="no-build">No build yet</div>
-  </div>
-</div>
-
-<div class="divider"></div>
-
-<button id="copyBtn">Open overlay window</button>
-<button id="resetBtn" class="danger">Reset build</button>
+<button id="stopBtn">Stop server</button>
 
 <script>
-let lastUpdated = null;
-
-// BroadcastChannel — real-time updates from main app
-const channel = new BroadcastChannel('deadlock_overlay');
-channel.onmessage = e => { renderBuild(e.data); updateStatus(true); };
-
-// localStorage — load on open + watch for changes
-function loadBuild() {
+async function checkStatus() {
   try {
-    const raw = localStorage.getItem('deadlock_overlay');
-    if (raw) renderBuild(JSON.parse(raw));
-  } catch {}
-}
-
-window.addEventListener('storage', e => {
-  if (e.key === 'deadlock_overlay') loadBuild();
-});
-
-function renderBuild(data) {
-  if (!data || data.updatedAt === lastUpdated) return;
-  lastUpdated = data.updatedAt;
-  updateStatus(true);
-  const el = document.getElementById('buildInfo');
-  if (!data.hero && !data.items?.length) {
-    el.innerHTML = '<div class="no-build">No build yet</div>';
-    return;
+    await fetch('http://localhost:3030/data/ping');
+    setStatus(true);
+  } catch {
+    setStatus(false);
   }
-  let html = '';
-  if (data.hero?.name) html += row('Hero', data.hero.name);
-  if (data.skills?.length) html += row('Skills', `${data.skills.length} cards`);
-  if (data.items?.length) {
-    html += row('Items', `${data.items.length} items`);
-    if (data.totalCost != null) html += row('Cost', `${data.totalCost.toLocaleString()} souls`);
-  }
-  el.innerHTML = html || '<div class="no-build">No build yet</div>';
 }
 
-function row(label, value) {
-  return `<div class="build-row"><div class="build-row-label">${label}</div><div class="build-row-value">${value}</div></div>`;
+function setStatus(online) {
+  document.getElementById('dot').className = `dot ${online ? 'online' : 'offline'}`;
+  document.getElementById('status').textContent = online ? 'Server running' : 'Server offline';
+  document.getElementById('stopBtn').style.display = online ? 'block' : 'none';
 }
 
-function updateStatus(online) {
-  document.getElementById('statusDot').className = `status-dot ${online ? 'online' : 'offline'}`;
-  document.getElementById('statusText').textContent = online ? 'Connected' : 'Open from main site';
-}
-
-// Copy overlay link — opens overlay as popup
-document.getElementById('copyBtn').addEventListener('click', function() {
-  window.open('../overlay.html', 'deadlock_overlay', 'width=440,height=400');
+document.getElementById('stopBtn').addEventListener('click', async function() {
+  await fetch('http://localhost:3030/shutdown', { method: 'POST' }).catch(() => {});
+  setStatus(false);
 });
 
-// Reset build
-document.getElementById('resetBtn').addEventListener('click', function() {
-  localStorage.removeItem('deadlock_overlay');
-  channel.postMessage(null);
-  document.getElementById('buildInfo').innerHTML = '<div class="no-build">No build yet</div>';
-  lastUpdated = null;
-  this.textContent = 'Done!';
-  setTimeout(() => this.textContent = 'Reset build', 1200);
-});
-
-loadBuild();
-updateStatus(!!localStorage.getItem('deadlock_overlay'));
+checkStatus();
+setInterval(checkStatus, 3000);
 </script>
 </body>
 </html>

@@ -252,12 +252,18 @@ function load() {
 const channel = new BroadcastChannel('deadlock_overlay');
 channel.onmessage = e => render(e.data);
 
-// localStorage fallback (same browser, same origin)
 load();
-window.addEventListener('storage', e => {
-  if (e.key === 'deadlock_overlay') load();
-});
 
+// Poll local server — works with OBS Browser Source
+const token = new URLSearchParams(location.search).get('token');
+async function pollRelay() {
+  if (!token) return;
+  try {
+    const res = await fetch(`http://localhost:3030/data/${token}`);
+    if (res.ok) { const d = await res.json(); if (d) render(d); }
+  } catch {}
+}
+setInterval(pollRelay, 1000);
 </script>
 </body>
 </html>
