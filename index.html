@@ -1628,7 +1628,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const data = { hero, skills, items, totalCost, updatedAt: Date.now() };
     localStorage.setItem('deadlock_overlay', JSON.stringify(data));
     overlayChannel.postMessage(data);
-    const relayUrl = localStorage.getItem('overlay_relay_url') || 'http://localhost:3030';
+    const relayUrl = localStorage.getItem('overlay_relay_url') || 'https://deadlock-randomizer-production.up.railway.app';
     fetch(`${relayUrl}/update`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
