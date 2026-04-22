@@ -421,6 +421,7 @@
   <div style="position:absolute;right:20px;top:50%;transform:translateY(-50%);display:flex;gap:8px;align-items:center;">
     <button onclick="window.open('overlay.html','deadlock_overlay','width=440,height=400')" style="font-size:10px;letter-spacing:1.5px;padding:5px 12px;opacity:0.6;">OBS OVERLAY</button>
     <button id="copyOverlayBtn" style="font-size:10px;letter-spacing:1.5px;padding:5px 12px;opacity:0.6;">COPY LINK</button>
+    <button id="openControlBtn" style="font-size:10px;letter-spacing:1.5px;padding:5px 12px;opacity:0.6;">OBS DOCK</button>
   </div>
 </header>
 
@@ -1616,6 +1617,11 @@ window.addEventListener('DOMContentLoaded', () => {
       this.textContent = 'COPIED!';
       setTimeout(() => this.textContent = 'COPY LINK', 1500);
     });
+  });
+
+  document.getElementById('openControlBtn').addEventListener('click', function() {
+    const base = localStorage.getItem('overlay_relay_url') || 'http://localhost:3030';
+    window.open(`${base}/control.html?token=${getOverlayToken()}`, 'deadlock_control', 'width=260,height=420');
   });
 
   const overlayChannel = new BroadcastChannel('deadlock_overlay');
