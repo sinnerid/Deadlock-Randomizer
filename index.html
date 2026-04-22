@@ -418,7 +418,10 @@
 <!-- Fixed title — always visible -->
 <header class="site-header">
   <h1>Deadlock<sup style="font-size:0.45em;vertical-align:super;">©</sup> build randomizer</h1>
-  <button id="openOverlayBtn" onclick="window.open('overlay.html','deadlock_overlay','width=440,height=400')" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:10px;letter-spacing:1.5px;padding:5px 12px;opacity:0.6;">OBS OVERLAY</button>
+  <div style="position:absolute;right:20px;top:50%;transform:translateY(-50%);display:flex;gap:8px;align-items:center;">
+    <button onclick="window.open('overlay.html','deadlock_overlay','width=440,height=400')" style="font-size:10px;letter-spacing:1.5px;padding:5px 12px;opacity:0.6;">OBS OVERLAY</button>
+    <button id="copyOverlayBtn" onclick="navigator.clipboard.writeText('https://deadlock-randomizer-production.up.railway.app/overlay.html').then(()=>{this.textContent='COPIED!';setTimeout(()=>this.textContent='COPY LINK',1500)})" style="font-size:10px;letter-spacing:1.5px;padding:5px 12px;opacity:0.6;">COPY LINK</button>
+  </div>
 </header>
 
 <div class="scroll-container" id="scrollContainer">
