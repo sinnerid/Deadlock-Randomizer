@@ -418,6 +418,7 @@
 <!-- Fixed title — always visible -->
 <header class="site-header">
   <h1>Deadlock<sup style="font-size:0.45em;vertical-align:super;">©</sup> build randomizer</h1>
+  <button id="openOverlayBtn" onclick="window.open('overlay.html','deadlock_overlay','width=440,height=400')" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:10px;letter-spacing:1.5px;padding:5px 12px;opacity:0.6;">OBS OVERLAY</button>
 </header>
 
 <div class="scroll-container" id="scrollContainer">
@@ -1509,11 +1510,12 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   const skillResultEl = document.getElementById('skillResult');
+  let lastSkillSequence = [];
 
   document.getElementById('rollSkillBtn').addEventListener('click', () => {
     skillResultEl.innerHTML = '';
-    const cards = generateSkillSequence();
-    cards.forEach((data, i) => skillResultEl.appendChild(makeSkillCard(data, i)));
+    lastSkillSequence = generateSkillSequence();
+    lastSkillSequence.forEach((data, i) => skillResultEl.appendChild(makeSkillCard(data, i)));
     updateSummary('skills');
   });
 
@@ -1573,7 +1575,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function updateSummary(section) {
     if (section === 'heroes') {
-      // for hero selection: clone the selected card into summary
       const tgt = document.getElementById('summaryHeroes');
       tgt.innerHTML = '';
       const sel = heroSelectGrid.querySelector('.hero-select-card.selected');
@@ -1590,6 +1591,43 @@ window.addEventListener('DOMContentLoaded', () => {
         tgt.innerHTML = hasItems && strong ? strong.innerHTML : '';
       }
     }
+    saveOverlayData();
+  }
+
+  const overlayChannel = new BroadcastChannel('deadlock_overlay');
+
+  function saveOverlayData() {
+    const sel = heroSelectGrid.querySelector('.hero-select-card.selected');
+    const hero = sel ? {
+      name: sel.querySelector('.hero-name')?.textContent || '',
+      img: sel.querySelector('img')?.getAttribute('src') || ''
+    } : null;
+
+    const skillCards = [...document.querySelectorAll('#skillResult .flip-wrapper')];
+    const skills = skillCards.map((card, i) => {
+      const back = card.querySelector('.skill-card-back');
+      const seq = lastSkillSequence[i];
+      return {
+        img: back?.querySelector('img')?.getAttribute('src') || '',
+        name: back?.querySelector('.sc-name')?.textContent || '',
+        tier: seq?.tier || 0,
+        ab: seq?.ab ?? -1
+      };
+    });
+
+    const items = currentPicks.map(name => ({
+      name,
+      img: API_ITEM_IMAGE.get(name) || nameToFile(name),
+      tier: ITEM_TIER.get(name) || 1
+    }));
+
+    const totalCost = currentPicks.length > 0
+      ? currentPicks.reduce((s, n) => s + getItemCost(n), 0)
+      : null;
+
+    const data = { hero, skills, items, totalCost, updatedAt: Date.now() };
+    localStorage.setItem('deadlock_overlay', JSON.stringify(data));
+    overlayChannel.postMessage(data);
   }
 });
 

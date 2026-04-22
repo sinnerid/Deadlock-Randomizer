@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Deadlock Overlay</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    font-family: 'Radiance', 'Segoe UI', sans-serif;
+    width: 420px;
+    padding: 10px;
+  }
+
+  #overlay {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(10, 7, 2, 0.82);
+    border: 1px solid rgba(200, 146, 42, 0.25);
+    border-radius: 10px;
+    padding: 10px;
+    backdrop-filter: blur(8px);
+  }
+
+  /* ── Hero row ── */
+  .hero-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .hero-portrait {
+    width: 48px;
+    height: 68px;
+    object-fit: cover;
+    object-position: top center;
+    border-radius: 5px;
+    border: 1px solid rgba(200,146,42,0.4);
+    flex-shrink: 0;
+  }
+
+  .hero-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .hero-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(200,146,42,0.7);
+  }
+
+  .hero-name {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #fff;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    height: 1px;
+    background: rgba(200,146,42,0.2);
+  }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(200,146,42,0.6);
+    margin-bottom: 5px;
+  }
+
+  /* ── Skills grid ── */
+  .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+  }
+
+  .skill-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 5px;
+    padding: 4px 2px;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .skill-cell img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+  }
+
+  .skill-dots {
+    display: flex;
+    gap: 2px;
+  }
+
+  .skill-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+  }
+
+  .skill-dot.filled {
+    background: #c8922a;
+  }
+
+  /* ── Items grid ── */
+  .items-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+  }
+
+  .item-cell {
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    aspect-ratio: 1;
+  }
+
+  .item-cell img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .item-tier {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    font-size: 7px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 0 3px #000;
+    line-height: 1;
+  }
+
+  /* ── Total cost ── */
+  .cost-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(200,146,42,0.9);
+    letter-spacing: 1px;
+  }
+
+  .cost-row img {
+    height: 12px;
+    width: auto;
+  }
+
+  /* ── Empty state ── */
+  .empty {
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    text-align: center;
+    padding: 8px 0;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+<div id="overlay">
+  <div class="empty">Waiting for build...</div>
+</div>
+
+<script>
+// Tier colors matching main app: SK_TIER_COLORS = ['#b0b0b0', '#4b8fff', '#c8922a']
+const SK_TIER_COLORS = ['#b0b0b0', '#4b8fff', '#c8922a'];
+
+function render(data) {
+  const el = document.getElementById('overlay');
+
+  if (!data || (!data.skills?.length && !data.items?.length)) {
+    el.innerHTML = '<div class="empty">Waiting for build...</div>';
+    return;
+  }
+
+  let html = '';
+
+  // Skills
+  if (data.skills?.length) {
+    html += '<div><div class="section-label">Ability upgrade</div><div class="skills-grid">';
+    data.skills.forEach(s => {
+      const tColor = SK_TIER_COLORS[(s.tier || 1) - 1] || '#b0b0b0';
+      const dots = Array.from({ length: 3 }, (_, i) => {
+        const filled = i < s.tier;
+        const bg = filled ? tColor : 'rgba(255,255,255,0.12)';
+        const shadow = filled ? `box-shadow:0 0 5px ${tColor}88;` : '';
+        return `<div class="skill-dot" style="background:${bg};${shadow}"></div>`;
+      }).join('');
+      html += `
+        <div class="skill-cell">
+          ${s.img ? `<img src="${s.img}" alt="">` : ''}
+          <div class="skill-dots">${dots}</div>
+        </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  // Items
+  if (data.items?.length) {
+    html += '<div class="divider"></div>';
+    html += '<div><div class="section-label">Items</div><div class="items-grid">';
+    data.items.forEach(item => {
+      html += `
+        <div class="item-cell">
+          ${item.img ? `<img src="${item.img}" alt="${item.name}">` : ''}
+        </div>`;
+    });
+    html += '</div></div>';
+
+    if (data.totalCost != null) {
+      html += `
+        <div class="cost-row">
+          ${data.totalCost.toLocaleString()}
+          <img src="items/souls/Souls.webp" alt="souls">
+        </div>`;
+    }
+  }
+
+  el.innerHTML = html;
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem('deadlock_overlay');
+    render(raw ? JSON.parse(raw) : null);
+  } catch { render(null); }
+}
+
+// BroadcastChannel — works when opened from the same browser as the main app
+const channel = new BroadcastChannel('deadlock_overlay');
+channel.onmessage = e => render(e.data);
+
+// localStorage fallback (same origin, same browser)
+load();
+window.addEventListener('storage', e => {
+  if (e.key === 'deadlock_overlay') load();
+});
+</script>
+</body>
+</html>
