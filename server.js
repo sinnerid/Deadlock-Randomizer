@@ -36,6 +36,14 @@ http.createServer((req, res) => {
     return;
   }
 
+  // POST /reset/:token
+  const resetMatch = req.method === 'POST' && req.url.match(/^\/reset\/([a-zA-Z0-9_-]+)$/);
+  if (resetMatch) {
+    store.delete(resetMatch[1]);
+    res.writeHead(200); res.end('ok');
+    return;
+  }
+
   // GET /data/:token
   const getMatch = req.method === 'GET' && req.url.match(/^\/data\/([a-zA-Z0-9_-]+)$/);
   if (getMatch) {

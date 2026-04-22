@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Deadlock Overlay Control</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 13px;
+    padding: 12px;
+    min-width: 220px;
+  }
+
+  .title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #c8922a;
+    font-weight: 700;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(200,146,42,0.3);
+  }
+
+  .section { margin-bottom: 12px; }
+
+  .label {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 5px;
+  }
+
+  /* Status */
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #444;
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .status-dot.online { background: #4caf50; box-shadow: 0 0 6px #4caf5088; }
+  .status-dot.offline { background: #f44336; box-shadow: 0 0 6px #f4433688; }
+
+  .status-text { font-size: 12px; color: rgba(255,255,255,0.7); }
+
+  /* Buttons */
+  button {
+    width: 100%;
+    padding: 7px 12px;
+    border: 1px solid rgba(200,146,42,0.3);
+    border-radius: 5px;
+    background: rgba(200,146,42,0.08);
+    color: #c8922a;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    margin-bottom: 6px;
+  }
+  button:hover { background: rgba(200,146,42,0.18); border-color: rgba(200,146,42,0.6); }
+  button:active { background: rgba(200,146,42,0.28); }
+  button.success { color: #4caf50; border-color: rgba(76,175,80,0.4); background: rgba(76,175,80,0.08); }
+  button.danger { color: #f44336; border-color: rgba(244,67,54,0.3); background: rgba(244,67,54,0.06); }
+  button.danger:hover { background: rgba(244,67,54,0.15); }
+
+  /* Build preview */
+  .build-info {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .build-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .build-row-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    width: 50px;
+    flex-shrink: 0;
+  }
+
+  .build-row-value {
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .no-build {
+    font-size: 11px;
+    color: rgba(255,255,255,0.25);
+    text-align: center;
+    padding: 6px 0;
+  }
+
+  .divider {
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+    margin: 10px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="title">🎮 Overlay Control</div>
+
+<div class="section">
+  <div class="label">Server</div>
+  <div class="status-row">
+    <div class="status-dot" id="statusDot"></div>
+    <div class="status-text" id="statusText">Checking...</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div class="section">
+  <div class="label">Current build</div>
+  <div class="build-info" id="buildInfo">
+    <div class="no-build">No build yet</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<button id="copyBtn">Copy overlay link</button>
+<button id="resetBtn" class="danger">Reset build</button>
+
+<script>
+const BASE = location.origin;
+
+// Token — ask main site via localStorage (same origin if opened from site)
+// or use URL param ?token=...
+const token = new URLSearchParams(location.search).get('token')
+  || localStorage.getItem('overlay_token')
+  || '';
+
+let lastUpdated = null;
+
+// ── Status check ──
+async function checkStatus() {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  try {
+    const res = await fetch(`${BASE}/data/${token || 'ping'}`);
+    if (res.ok) {
+      dot.className = 'status-dot online';
+      txt.textContent = 'Online';
+    } else throw new Error();
+  } catch {
+    dot.className = 'status-dot offline';
+    txt.textContent = 'Offline — run server.js';
+  }
+}
+
+// ── Build preview ──
+async function loadBuild() {
+  if (!token) return;
+  try {
+    const res = await fetch(`${BASE}/data/${token}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data || data.updatedAt === lastUpdated) return;
+    lastUpdated = data.updatedAt;
+    renderBuild(data);
+  } catch {}
+}
+
+function renderBuild(data) {
+  const el = document.getElementById('buildInfo');
+  if (!data || (!data.hero && !data.items?.length)) {
+    el.innerHTML = '<div class="no-build">No build yet</div>';
+    return;
+  }
+  let html = '';
+  if (data.hero?.name) html += row('Hero', data.hero.name);
+  if (data.skills?.length) html += row('Skills', `${data.skills.length} cards`);
+  if (data.items?.length) {
+    html += row('Items', `${data.items.length} items`);
+    if (data.totalCost != null) html += row('Cost', `${data.totalCost.toLocaleString()} souls`);
+  }
+  el.innerHTML = html || '<div class="no-build">No build yet</div>';
+}
+
+function row(label, value) {
+  return `<div class="build-row">
+    <div class="build-row-label">${label}</div>
+    <div class="build-row-value">${value}</div>
+  </div>`;
+}
+
+// ── Copy overlay link ──
+document.getElementById('copyBtn').addEventListener('click', function() {
+  if (!token) { this.textContent = 'No token found'; return; }
+  const url = `${BASE}/overlay.html?token=${token}`;
+  navigator.clipboard.writeText(url).then(() => {
+    this.textContent = 'Copied!';
+    this.className = 'success';
+    setTimeout(() => { this.textContent = 'Copy overlay link'; this.className = ''; }, 1500);
+  });
+});
+
+// ── Reset build ──
+document.getElementById('resetBtn').addEventListener('click', async function() {
+  if (!token) return;
+  await fetch(`${BASE}/reset/${token}`, { method: 'POST' }).catch(() => {});
+  renderBuild(null);
+  this.textContent = 'Done!';
+  setTimeout(() => this.textContent = 'Reset build', 1200);
+});
+
+// ── Poll ──
+checkStatus();
+loadBuild();
+setInterval(() => { checkStatus(); loadBuild(); }, 2000);
+</script>
+</body>
+</html>
