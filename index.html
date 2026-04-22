@@ -1628,6 +1628,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const data = { hero, skills, items, totalCost, updatedAt: Date.now() };
     localStorage.setItem('deadlock_overlay', JSON.stringify(data));
     overlayChannel.postMessage(data);
+    const relayUrl = localStorage.getItem('overlay_relay_url') || 'http://localhost:3030';
+    fetch(`${relayUrl}/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).catch(() => {});
   }
 });
 

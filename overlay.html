@@ -248,15 +248,29 @@ function load() {
   } catch { render(null); }
 }
 
-// BroadcastChannel — works when opened from the same browser as the main app
+// BroadcastChannel — when overlay opened as popup from main app
 const channel = new BroadcastChannel('deadlock_overlay');
 channel.onmessage = e => render(e.data);
 
-// localStorage fallback (same origin, same browser)
+// localStorage fallback (same browser, same origin)
 load();
 window.addEventListener('storage', e => {
   if (e.key === 'deadlock_overlay') load();
 });
+
+// Relay polling — works with OBS Browser Source
+// Uses same origin as overlay (works both locally and on Railway)
+const RELAY_BASE = location.origin;
+async function pollRelay() {
+  try {
+    const res = await fetch(`${RELAY_BASE}/data`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data) render(data);
+    }
+  } catch {}
+}
+setInterval(pollRelay, 1000);
 </script>
 </body>
 </html>
