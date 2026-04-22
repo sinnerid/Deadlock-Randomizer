@@ -1607,6 +1607,14 @@ window.addEventListener('DOMContentLoaded', () => {
     return token;
   }
 
+  document.getElementById('copyOverlayBtn').addEventListener('click', function() {
+    const url = `http://localhost:3030/overlay.html?token=${getOverlayToken()}`;
+    navigator.clipboard.writeText(url).then(() => {
+      this.textContent = 'COPIED!';
+      setTimeout(() => this.textContent = 'COPY LINK', 1500);
+    });
+  });
+
   document.getElementById('openControlBtn').addEventListener('click', () => {
     window.open('http://localhost:3030/control.html', 'deadlock_control', 'width=240,height=130');
   });
