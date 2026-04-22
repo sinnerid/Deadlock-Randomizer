@@ -1607,7 +1607,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function getOverlayUrl() {
-    const base = localStorage.getItem('overlay_relay_url') || 'https://overlay.deadlockrandomizer.site';
+    const base = localStorage.getItem('overlay_relay_url') || 'http://localhost:3030';
     return `${base}/overlay.html?token=${getOverlayToken()}`;
   }
 
@@ -1652,7 +1652,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const data = { hero, skills, items, totalCost, updatedAt: Date.now() };
     localStorage.setItem('deadlock_overlay', JSON.stringify(data));
     overlayChannel.postMessage(data);
-    const relayUrl = localStorage.getItem('overlay_relay_url') || 'https://overlay.deadlockrandomizer.site';
+    const relayUrl = localStorage.getItem('overlay_relay_url') || 'http://localhost:3030';
     fetch(`${relayUrl}/update/${getOverlayToken()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
