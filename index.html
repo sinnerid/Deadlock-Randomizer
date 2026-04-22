@@ -420,7 +420,7 @@
   <h1>Deadlock<sup style="font-size:0.45em;vertical-align:super;">©</sup> build randomizer</h1>
   <div style="position:absolute;right:20px;top:50%;transform:translateY(-50%);display:flex;gap:8px;align-items:center;">
     <button onclick="window.open('overlay.html','deadlock_overlay','width=440,height=400')" style="font-size:10px;letter-spacing:1.5px;padding:5px 12px;opacity:0.6;">OBS OVERLAY</button>
-    <button id="copyOverlayBtn" onclick="navigator.clipboard.writeText('https://deadlock-randomizer-production.up.railway.app/overlay.html').then(()=>{this.textContent='COPIED!';setTimeout(()=>this.textContent='COPY LINK',1500)})" style="font-size:10px;letter-spacing:1.5px;padding:5px 12px;opacity:0.6;">COPY LINK</button>
+    <button id="copyOverlayBtn" style="font-size:10px;letter-spacing:1.5px;padding:5px 12px;opacity:0.6;">COPY LINK</button>
   </div>
 </header>
 
@@ -1597,6 +1597,27 @@ window.addEventListener('DOMContentLoaded', () => {
     saveOverlayData();
   }
 
+  function getOverlayToken() {
+    let token = localStorage.getItem('overlay_token');
+    if (!token) {
+      token = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem('overlay_token', token);
+    }
+    return token;
+  }
+
+  function getOverlayUrl() {
+    const base = localStorage.getItem('overlay_relay_url') || 'https://deadlock-randomizer-production.up.railway.app';
+    return `${base}/overlay.html?token=${getOverlayToken()}`;
+  }
+
+  document.getElementById('copyOverlayBtn').addEventListener('click', function() {
+    navigator.clipboard.writeText(getOverlayUrl()).then(() => {
+      this.textContent = 'COPIED!';
+      setTimeout(() => this.textContent = 'COPY LINK', 1500);
+    });
+  });
+
   const overlayChannel = new BroadcastChannel('deadlock_overlay');
 
   function saveOverlayData() {
@@ -1632,7 +1653,7 @@ window.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('deadlock_overlay', JSON.stringify(data));
     overlayChannel.postMessage(data);
     const relayUrl = localStorage.getItem('overlay_relay_url') || 'https://deadlock-randomizer-production.up.railway.app';
-    fetch(`${relayUrl}/update`, {
+    fetch(`${relayUrl}/update/${getOverlayToken()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
