@@ -51,7 +51,6 @@ http.createServer((req, res) => {
     res.end(data);
   });
 
-const PORT = process.env.PORT || 3030;
-}).listen(PORT, () => {
-  console.log(`Deadlock overlay relay running on port ${PORT}`);
+}).listen(process.env.PORT || 3030, () => {
+  console.log(`Deadlock overlay relay running on port ${process.env.PORT || 3030}`);
 });
